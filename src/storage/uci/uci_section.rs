@@ -52,4 +52,8 @@ impl UciSection {
     pub fn get(&self, name: &str) -> Option<&UciOption> {
         self.options.iter().find(|opt| opt.name == name)
     }
+
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut UciOption> {
+        self.options.iter_mut().find(|opt| opt.name == name)
+    }
 }
