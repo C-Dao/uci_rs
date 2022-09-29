@@ -16,24 +16,24 @@ impl UciSection {
         }
     }
 
-    pub fn add(&self, option: UciOption) {
+    pub fn add(&mut self, option: UciOption) {
         self.options.push(option);
     }
 
-    pub fn merge(&self, option: UciOption) {
-        for opt in self.options {
+    pub fn merge(&mut self, option: UciOption) {
+        for opt in self.options.iter_mut() {
             if opt.name == option.name {
                 opt.merge_values(option.values);
+                return;
             }
         }
-
         self.add(option);
     }
 
-    pub fn del(&self, name: String) -> bool {
+    pub fn del(&mut self, name: &str) -> bool {
         let mut idx = 0;
 
-        for opt in self.options {
+        for opt in self.options.iter() {
             if opt.name == name {
                 break;
             }
@@ -49,7 +49,7 @@ impl UciSection {
         true
     }
 
-    pub fn get(&self, name: String) -> Option<&UciOption> {
+    pub fn get(&self, name: &str) -> Option<&UciOption> {
         self.options.iter().find(|opt| opt.name == name)
     }
 }

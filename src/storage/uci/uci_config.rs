@@ -67,7 +67,7 @@ impl UciConfig {
         index
     }
 
-    pub fn get(&self, name: String) -> Result<Option<&UciSection>, Error> {
+    pub fn get(&self, name: &str) -> Result<Option<&UciSection>, Error> {
         if name.starts_with("@") {
             self._get_unnamed(name)
         } else {
@@ -75,11 +75,11 @@ impl UciConfig {
         }
     }
 
-    fn _get_named(&self, name: String) -> Result<Option<&UciSection>, Error> {
+    fn _get_named(&self, name: &str) -> Result<Option<&UciSection>, Error> {
         Ok(self.sections.iter().find(|section| section.name == name))
     }
 
-    fn _unmangle_section_name(&self, section_name: String) -> Result<(String, i32), Error> {
+    fn _unmangle_section_name(&self, section_name: &str) -> Result<(String, i32), Error> {
         let len = section_name.len();
         let bytes_section_name = section_name.as_bytes();
         if len < 5 {
@@ -140,7 +140,7 @@ impl UciConfig {
         Ok((sec_type, sec_index))
     }
 
-    fn _get_unnamed(&self, name: String) -> Result<Option<&UciSection>, Error> {
+    fn _get_unnamed(&self, name: &str) -> Result<Option<&UciSection>, Error> {
         let (sec_type, sec_index) = self._unmangle_section_name(name)?;
         let count = self._count(sec_type);
         let index = if sec_index >= 0 {
@@ -197,7 +197,7 @@ impl UciConfig {
         same_name_sec.unwrap()
     }
 
-    pub fn del(&mut self, name: String) {
+    pub fn del(&mut self, name: &str) {
         let idx = self
             .sections
             .iter()

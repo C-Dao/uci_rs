@@ -31,7 +31,7 @@ impl UciOption {
     }
 
     pub fn merge_values(&mut self, values: Vec<String>) {
-        let set: HashSet<String> = HashSet::from_iter([self.values, values].concat().into_iter());
+        let set: HashSet<String> = HashSet::from_iter([values, self.values.clone()].concat().into_iter());
 
         self.values = set.into_iter().collect();
     }
