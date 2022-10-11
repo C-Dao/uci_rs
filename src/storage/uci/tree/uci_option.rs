@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Clone)]
 pub struct UciOption {
     pub name: String,
     pub values: Vec<String>,
     pub opt_type: UciOptionType,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Clone)]
 pub enum UciOptionType {
     TypeOption,
     TypeList,

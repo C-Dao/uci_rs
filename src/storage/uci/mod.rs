@@ -1,23 +1,22 @@
-mod uci_config;
-mod uci_option;
-mod uci_section;
+pub mod parser;
+pub mod tree;
 
-use crate::utils::Error;
-use smol::fs::unix::PermissionsExt;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::Read;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::Mutex;
-use tempfile::NamedTempFile;
 
-use uci_config::UciConfig;
-use uci_option::UciOption;
-use uci_section::UciSection;
+use crate::utils::tempfile::TempFile;
+use crate::utils::{Error, Result};
 
-use self::uci_option::UciOptionType;
+use self::tree::uci_config::UciConfig;
+use self::tree::uci_option::{UciOption, UciOptionType};
+use self::tree::uci_section::UciSection;
 
-pub struct UciTree {
+
+struct UciTree {
     dir: Box<Path>,
     configs: HashMap<String, UciConfig>,
     lock: Mutex<bool>,
@@ -32,7 +31,7 @@ impl UciTree {
         }
     }
 
-    fn _load_config(&self, name: &str) -> Result<(), Error> {
+    fn _load_config(&self, name: &str) -> Result<()> {
         let mut file = File::open(self.dir.join(name))?;
         let mut string_buffer = String::new();
 
@@ -45,8 +44,8 @@ impl UciTree {
         Ok(())
     }
 
-    fn _save_config(&self, config: &UciConfig) -> Result<(), Error> {
-        let mut temp_file = NamedTempFile::new_in(&self.dir)?;
+    fn _save_config(&self, config: &UciConfig) -> Result<()> {
+        let mut temp_file = TempFile::new(&self.dir)?;
         match config.write_in(&mut temp_file) {
             Ok(()) => {
                 let mut perms = temp_file.as_file().metadata()?.permissions();
@@ -63,33 +62,28 @@ impl UciTree {
         }
     }
 
-    fn _ensure_config_loaded(&mut self, config_name: &str) -> Result<&UciConfig, Error> {
+    fn _ensure_config_loaded(&mut self, config_name: &str) -> Result<&UciConfig> {
         if self.configs.contains_key(config_name) {
             return Ok(self.configs.get(config_name).unwrap());
         };
-        match self.load_config(config_name) {
-            Ok(_) => {
-                if let Some(cfg) = self.configs.get(config_name) {
-                    Ok(cfg)
-                } else {
-                    Err(Error::new(format!("load config {} fail", config_name)))
-                }
-            }
-            Err(err) => Err(err),
+
+        self.load_config(config_name)?;
+
+        if let Some(cfg) = self.configs.get(config_name) {
+            Ok(cfg)
+        } else {
+            Err(Error::new(format!("load config {} fail", config_name)))
         }
     }
 
-    fn _ensure_config_loaded_mut(&mut self, config_name: &str) -> Result<&mut UciConfig, Error> {
+    fn _ensure_config_loaded_mut(&mut self, config_name: &str) -> Result<&mut UciConfig> {
         if self.configs.contains_key(config_name) {
             return Ok(self.configs.get_mut(config_name).unwrap());
         };
 
-        match self.load_config(config_name) {
-            Ok(_) => {
-                return Ok(self.configs.get_mut(config_name).unwrap());
-            }
-            Err(err) => Err(err),
-        }
+        self.load_config(config_name)?;
+
+        return Ok(self.configs.get_mut(config_name).unwrap());
     }
 
     fn _lookup_values(
@@ -97,7 +91,7 @@ impl UciTree {
         config_name: &str,
         section_name: &str,
         option_name: &str,
-    ) -> Result<&Vec<String>, Error> {
+    ) -> Result<&Vec<String>> {
         match self._lookup_option(config_name, section_name, option_name) {
             Ok(Some(option)) => Ok(&option.values),
             Ok(None) => Err(Error::new(format!(
@@ -113,7 +107,7 @@ impl UciTree {
         config_name: &str,
         section_name: &str,
         option_name: &str,
-    ) -> Result<Option<&UciOption>, Error> {
+    ) -> Result<Option<&UciOption>> {
         match self.configs.get(config_name) {
             Some(config) => match config.get(section_name) {
                 Ok(Some(section)) => Ok(section.get(option_name)),
@@ -126,39 +120,21 @@ impl UciTree {
 }
 
 pub trait Uci {
-    fn load_config(&mut self, name: &str) -> Result<(), Error>;
-    fn load_config_force(&mut self, name: &str) -> Result<(), Error>;
-    fn commit(&mut self) -> Result<(), Error>;
-    fn revert(&mut self, config_names: Vec<String>) -> Result<(), Error>;
-    fn get_sections(
-        &mut self,
-        config_name: &str,
-        sec_type: &str,
-    ) -> Result<Option<Vec<String>>, Error>;
-    fn add_section(
-        &mut self,
-        config_name: &str,
-        section_name: &str,
-        sec_type: &str,
-    ) -> Result<(), Error>;
-    fn get(
-        &self,
-        config_name: &str,
-        section_name: &str,
-        option_name: &str,
-    ) -> Result<&Vec<String>, Error>;
+    fn load_config(&mut self, name: &str) -> Result<()>;
+    fn load_config_force(&mut self, name: &str) -> Result<()>;
+    fn commit(&mut self) -> Result<()>;
+    fn revert(&mut self, config_names: Vec<String>) -> Result<()>;
+    fn get_sections(&mut self, config_name: &str, sec_type: &str) -> Result<Option<Vec<String>>>;
+    fn add_section(&mut self, config_name: &str, section_name: &str, sec_type: &str) -> Result<()>;
+    fn get(&self, config_name: &str, section_name: &str, option_name: &str)
+        -> Result<&Vec<String>>;
     fn get_last(
         &self,
         config_name: &str,
         section_name: &str,
         option_name: &str,
-    ) -> Result<Option<String>, Error>;
-    fn get_bool(
-        &self,
-        config_name: &str,
-        section_name: &str,
-        option_name: &str,
-    ) -> Result<bool, Error>;
+    ) -> Result<Option<String>>;
+    fn get_bool(&self, config_name: &str, section_name: &str, option_name: &str) -> Result<bool>;
     fn set_type(
         &mut self,
         config_name: &str,
@@ -166,25 +142,20 @@ pub trait Uci {
         option_name: &str,
         opt_type: UciOptionType,
         values: Vec<String>,
-    ) -> Result<(), Error>;
+    ) -> Result<()>;
     fn set(
         &mut self,
         config_names: &str,
         section_name: &str,
         option_name: &str,
         values: Vec<String>,
-    ) -> Result<(), Error>;
-    fn del(
-        &mut self,
-        config_name: &str,
-        section_name: &str,
-        option_name: &str,
-    ) -> Result<(), Error>;
-    fn del_section(&mut self, config_name: &str, section_name: &str) -> Result<(), Error>;
+    ) -> Result<()>;
+    fn del(&mut self, config_name: &str, section_name: &str, option_name: &str) -> Result<()>;
+    fn del_section(&mut self, config_name: &str, section_name: &str) -> Result<()>;
 }
 
 impl Uci for UciTree {
-    fn load_config(&mut self, name: &str) -> Result<(), Error> {
+    fn load_config(&mut self, name: &str) -> Result<()> {
         let _lock = self.lock.lock();
 
         if self.configs.contains_key(name) {
@@ -194,20 +165,20 @@ impl Uci for UciTree {
         self._load_config(name)
     }
 
-    fn load_config_force(&mut self, name: &str) -> Result<(), Error> {
+    fn load_config_force(&mut self, name: &str) -> Result<()> {
         let _lock = self.lock.lock();
 
         self._load_config(name)
     }
 
-    fn commit(&mut self) -> Result<(), Error> {
+    fn commit(&mut self) -> Result<()> {
         let _lock = self.lock.lock();
 
         if let Err(error) = self
             .configs
             .iter()
             .filter(|(_, config)| config.modified == true)
-            .try_for_each(|(_, config)| -> Result<(), Error> { self._save_config(config) })
+            .try_for_each(|(_, config)| -> Result<()> { self._save_config(config) })
         {
             return Err(error);
         };
@@ -219,7 +190,7 @@ impl Uci for UciTree {
         Ok(())
     }
 
-    fn revert(&mut self, config_names: Vec<String>) -> Result<(), Error> {
+    fn revert(&mut self, config_names: Vec<String>) -> Result<()> {
         let _lock = self.lock.lock();
 
         for config_name in config_names {
@@ -229,11 +200,7 @@ impl Uci for UciTree {
         Ok(())
     }
 
-    fn get_sections(
-        &mut self,
-        config_name: &str,
-        sec_type: &str,
-    ) -> Result<Option<Vec<String>>, Error> {
+    fn get_sections(&mut self, config_name: &str, sec_type: &str) -> Result<Option<Vec<String>>> {
         if let Ok(cfg) = self._ensure_config_loaded(config_name) {
             return Ok(Some(
                 cfg.sections
@@ -252,7 +219,7 @@ impl Uci for UciTree {
         config_name: &str,
         section_name: &str,
         option_name: &str,
-    ) -> Result<&Vec<String>, Error> {
+    ) -> Result<&Vec<String>> {
         if let Ok(values) = self._lookup_values(config_name, section_name, option_name) {
             return Ok(values);
         };
@@ -268,19 +235,14 @@ impl Uci for UciTree {
         config_name: &str,
         section_name: &str,
         option_name: &str,
-    ) -> Result<Option<String>, Error> {
+    ) -> Result<Option<String>> {
         match self.get(config_name, section_name, option_name) {
             Ok(values) => Ok(Some(values.last().unwrap().clone())),
             Err(err) => Err(err),
         }
     }
 
-    fn get_bool(
-        &self,
-        config_name: &str,
-        section_name: &str,
-        option_name: &str,
-    ) -> Result<bool, Error> {
+    fn get_bool(&self, config_name: &str, section_name: &str, option_name: &str) -> Result<bool> {
         match self.get_last(config_name, section_name, option_name) {
             Ok(Some(val)) => match val.as_str() {
                 "1" => Ok(true),
@@ -306,7 +268,7 @@ impl Uci for UciTree {
         option_name: &str,
         opt_type: UciOptionType,
         values: Vec<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         match self._ensure_config_loaded_mut(config_name) {
             Ok(cfg) => match cfg.get_mut(section_name) {
                 Ok(Some(sec)) => match sec.get_mut(option_name) {
@@ -327,7 +289,7 @@ impl Uci for UciTree {
         section_name: &str,
         option_name: &str,
         values: Vec<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         if values.len() > 1 {
             self.set_type(
                 config_name,
@@ -347,12 +309,7 @@ impl Uci for UciTree {
         }
     }
 
-    fn del(
-        &mut self,
-        config_name: &str,
-        section_name: &str,
-        option_name: &str,
-    ) -> Result<(), Error> {
+    fn del(&mut self, config_name: &str, section_name: &str, option_name: &str) -> Result<()> {
         match self._ensure_config_loaded_mut(config_name) {
             Ok(cfg) => match cfg.get_mut(section_name) {
                 Ok(Some(sec)) => {
@@ -366,16 +323,11 @@ impl Uci for UciTree {
         }
     }
 
-    fn add_section(
-        &mut self,
-        config_name: &str,
-        section_name: &str,
-        sec_type: &str,
-    ) -> Result<(), Error> {
+    fn add_section(&mut self, config_name: &str, section_name: &str, sec_type: &str) -> Result<()> {
         let cfg_res = self._ensure_config_loaded_mut(config_name);
 
         let cfg = if cfg_res.is_err() {
-            let mut cfg = UciConfig::new(config_name.to_string());
+            let mut cfg = UciConfig::new(&config_name);
             cfg.modified = true;
             self.configs.insert(config_name.to_string(), cfg);
             self.configs.get_mut(config_name).unwrap()
@@ -405,7 +357,7 @@ impl Uci for UciTree {
         }
     }
 
-    fn del_section(&mut self, config_name: &str, section_name: &str) -> Result<(), Error> {
+    fn del_section(&mut self, config_name: &str, section_name: &str) -> Result<()> {
         match self._ensure_config_loaded_mut(config_name) {
             Ok(cfg) => {
                 cfg.del(section_name);

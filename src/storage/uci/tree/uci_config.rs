@@ -1,13 +1,11 @@
-use std::{
-    io::{BufWriter, Write},
-    str::from_utf8,
-};
+use std::str::from_utf8;
+use std::io::{BufWriter, Write};
 
-use tempfile::NamedTempFile;
-
+use crate::utils::tempfile::TempFile;
+use crate::utils::{Error, Result};
 use super::{uci_option::UciOptionType, uci_section::UciSection};
-use crate::utils::Error;
 
+#[derive(Clone)]
 pub struct UciConfig {
     pub name: String,
     pub sections: Vec<UciSection>,
@@ -15,37 +13,37 @@ pub struct UciConfig {
 }
 
 impl UciConfig {
-    pub fn new(name: String) -> UciConfig {
+    pub fn new(name: &str) -> UciConfig {
         UciConfig {
-            name: name,
+            name: name.to_string(),
             sections: Vec::new(),
             modified: false,
         }
     }
 
-    pub fn write_in(&self, file: &mut NamedTempFile) -> Result<(), Error> {
+    pub fn write_in(&self, file: &mut TempFile) -> Result<()> {
         let mut buf = BufWriter::new(file);
 
         for sec in self.sections.iter() {
             if sec.name == "" {
-                buf.write_fmt(format_args!("\nconfig {}\n", sec.sec_type));
+                buf.write_fmt(format_args!("\nconfig {}\n", sec.sec_type))?;
             } else {
-                buf.write_fmt(format_args!("\nconfig {} '{}'\n", sec.sec_type, sec.name));
+                buf.write_fmt(format_args!("\nconfig {} '{}'\n", sec.sec_type, sec.name))?;
             }
 
             for opt in sec.options.iter() {
                 match opt.opt_type {
                     UciOptionType::TypeOption => {
-                        buf.write_fmt(format_args!("\toption {} '{}'\n", opt.name, opt.values[0]));
+                        buf.write_fmt(format_args!("\toption {} '{}'\n", opt.name, opt.values[0]))?;
                     }
                     UciOptionType::TypeList => {
                         for v in opt.values.iter() {
-                            buf.write_fmt(format_args!("\tlist {} '{}'\n", opt.name, v));
+                            buf.write_fmt(format_args!("\tlist {} '{}'\n", opt.name, v))?;
                         }
                     }
                 }
             }
-        }
+        };
 
         buf.write_all(b"\n")?;
         Ok(())
@@ -71,7 +69,7 @@ impl UciConfig {
         -1
     }
 
-    pub fn get(&self, name: &str) -> Result<Option<&UciSection>, Error> {
+    pub fn get(&self, name: &str) -> Result<Option<&UciSection>> {
         if name.starts_with("@") {
             self._get_unnamed(name)
         } else {
@@ -79,7 +77,7 @@ impl UciConfig {
         }
     }
 
-    pub fn get_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>, Error> {
+    pub fn get_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>> {
         if name.starts_with("@") {
             self._get_unnamed_mut(name)
         } else {
@@ -87,18 +85,18 @@ impl UciConfig {
         }
     }
 
-    fn _get_named(&self, name: &str) -> Result<Option<&UciSection>, Error> {
+    fn _get_named(&self, name: &str) -> Result<Option<&UciSection>> {
         Ok(self.sections.iter().find(|section| section.name == name))
     }
 
-    fn _get_named_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>, Error> {
+    fn _get_named_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>> {
         Ok(self
             .sections
             .iter_mut()
             .find(|section| section.name == name))
     }
 
-    fn _unmangle_section_name(&self, section_name: &str) -> Result<(String, i32), Error> {
+    fn _unmangle_section_name(&self, section_name: &str) -> Result<(String, i32)> {
         let len = section_name.len();
         let bytes_section_name = section_name.as_bytes();
         if len < 5 {
@@ -159,7 +157,7 @@ impl UciConfig {
         Ok((sec_type, sec_index))
     }
 
-    fn _get_unnamed(&self, name: &str) -> Result<Option<&UciSection>, Error> {
+    fn _get_unnamed(&self, name: &str) -> Result<Option<&UciSection>> {
         let (sec_type, sec_index) = self._unmangle_section_name(name)?;
         let count = self._count(&sec_type);
         let index = if sec_index >= 0 {
@@ -182,7 +180,7 @@ impl UciConfig {
         Ok(section)
     }
 
-    fn _get_unnamed_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>, Error> {
+    fn _get_unnamed_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>> {
         let (sec_type, sec_index) = self._unmangle_section_name(name)?;
         let count = self._count(&sec_type);
         let index = if sec_index >= 0 {
@@ -213,12 +211,12 @@ impl UciConfig {
             .len()
     }
 
-    pub fn add(&mut self, section: UciSection) -> &UciSection {
+    pub fn add(&mut self, section: UciSection) -> &mut UciSection {
         self.sections.push(section);
-        self.sections.last().unwrap()
+        self.sections.last_mut().unwrap()
     }
 
-    pub fn merge(&mut self, section: UciSection) {
+    pub fn merge(&mut self, section: UciSection) -> &mut UciSection {
         if self
             .sections
             .iter()
@@ -229,10 +227,10 @@ impl UciConfig {
             for opt in section.options.into_iter() {
                 same_name_sec_mut.merge(opt)
             }
-            return;
+            return same_name_sec_mut;
         };
 
-        self.add(section);
+        self.add(section)
     }
 
     pub fn del(&mut self, name: &str) {
