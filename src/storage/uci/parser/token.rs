@@ -7,11 +7,9 @@ pub struct TokenItem {
     pub pos: usize,
 }
 
-
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TokenItemType {
     TokenError = 0,
-    TokenBOF,
     TokenEOF,
     TokenPackage,
     TokenConfig,
@@ -26,9 +24,6 @@ impl fmt::Display for TokenItemType {
         match self {
             Self::TokenError => {
                 write!(f, "Error")
-            }
-            Self::TokenBOF => {
-                write!(f, "BOF")
             }
             Self::TokenEOF => {
                 write!(f, "EOF")
@@ -51,31 +46,21 @@ impl fmt::Display for TokenItemType {
             Self::TokenString => {
                 write!(f, "String")
             }
-            _ => {
-                write!(f, "Unknown")
-            }
         }
     }
 }
 
-pub struct Keyword {}
+pub struct KeyWord {}
 
-impl Keyword {
-    pub const KwPackage: &'static str = "package";
-    pub const KwConfig: &'static str = "config";
-    pub const KwOption: &'static str = "option";
-    pub const KwList: &'static str = "list";
+impl KeyWord {
+    pub const KW_PACKAGE: &'static str = "package";
+    pub const KW_CONFIG: &'static str = "config";
+    pub const KW_OPTION: &'static str = "option";
+    pub const KW_LIST: &'static str = "list";
 }
 
 impl fmt::Display for TokenItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.pos < 0 {
-            if self.typ != TokenItemType::TokenError && self.val.len() > 25 {
-                return write!(f, "({} {:?})", self.typ, self.val.get(0..25).unwrap());
-            };
-            return write!(f, "({} {:?})", self.typ, self.val);
-        };
-
         if self.typ != TokenItemType::TokenError && self.val.len() > 25 {
             return write!(
                 f,
@@ -119,9 +104,6 @@ impl fmt::Display for ScanTokenType {
             }
             Self::TokSection => {
                 write!(f, "config")
-            }
-            _ => {
-                write!(f, "unknown")
             }
         }
     }

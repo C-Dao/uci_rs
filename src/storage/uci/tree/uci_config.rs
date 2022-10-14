@@ -1,9 +1,9 @@
-use std::str::from_utf8;
 use std::io::{BufWriter, Write};
+use std::str::from_utf8;
 
+use super::{uci_option::UciOptionType, uci_section::UciSection};
 use crate::utils::tempfile::TempFile;
 use crate::utils::{Error, Result};
-use super::{uci_option::UciOptionType, uci_section::UciSection};
 
 #[derive(Clone)]
 pub struct UciConfig {
@@ -43,7 +43,7 @@ impl UciConfig {
                     }
                 }
             }
-        };
+        }
 
         buf.write_all(b"\n")?;
         Ok(())
@@ -53,20 +53,14 @@ impl UciConfig {
         if section.name != "" {
             return section.name.clone();
         }
-        format!("{}[{}]", section.sec_type, self._index(section))
+        format!("{}[{}]", section.sec_type, self._index(section).unwrap())
     }
 
-    fn _index(&self, section: &UciSection) -> i32 {
-        if let Some((index, _)) = self
-            .sections
+    fn _index(&self, section: &UciSection) -> Option<usize> {
+        self.sections
             .iter()
-            .enumerate()
-            .filter(|(_, sec)| sec.sec_type == section.sec_type)
-            .find(|(_, sec)| *sec == section)
-        {
-            return index as i32;
-        };
-        -1
+            .filter(|sec| sec.sec_type == section.sec_type)
+            .position(|sec| sec == section)
     }
 
     pub fn get(&self, name: &str) -> Result<Option<&UciSection>> {
@@ -111,7 +105,7 @@ impl UciConfig {
             ));
         };
 
-        let (mut bra, mut ket) = (0, len - 1);
+        let (mut bra, ket) = (0, len - 1);
 
         for (i, r) in bytes_section_name.iter().enumerate() {
             if i != 0 && *r as char == '@' {
@@ -240,20 +234,5 @@ impl UciConfig {
             .position(|sec| sec.name == name)
             .unwrap();
         self.sections.remove(idx);
-    }
-
-    pub fn section_name(&self, section: &UciSection) -> String {
-        if section.name != "" {
-            return section.name.clone();
-        };
-
-        format!("@{}[{}]", section.sec_type, self.index(section).unwrap())
-    }
-
-    pub fn index(&self, section: &UciSection) -> Option<usize> {
-        self.sections
-            .iter()
-            .filter(|sec| sec.sec_type == section.sec_type)
-            .position(|sec| sec == section)
     }
 }

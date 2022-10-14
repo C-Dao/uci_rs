@@ -1,8 +1,6 @@
 use std::collections::VecDeque;
 
-use super::token::{Keyword, TokenItem, TokenItemType};
-
-static eof: i32 = -1;
+use super::token::{KeyWord, TokenItem, TokenItemType};
 
 pub struct Lexer {
     name: String,
@@ -16,7 +14,7 @@ pub struct Lexer {
 
 trait LexerStateMachine {
     fn action(&mut self) -> Option<LexerState>;
-    fn lex_keyword(&mut self) -> Option<LexerState>;
+    fn lex_key_word(&mut self) -> Option<LexerState>;
     fn lex_comment(&mut self) -> Option<LexerState>;
     fn lex_package(&mut self) -> Option<LexerState>;
     fn lex_package_name(&mut self) -> Option<LexerState>;
@@ -32,7 +30,7 @@ trait LexerStateMachine {
 }
 
 enum LexerState {
-    LexKeyword,
+    LexKeyWord,
     LexComment,
     LexPackage,
     LexPackageName,
@@ -52,7 +50,7 @@ impl Lexer {
         return Lexer {
             name: name.to_string(),
             input: input,
-            state: Some(LexerState::LexKeyword),
+            state: Some(LexerState::LexKeyWord),
             items: Some(VecDeque::new()),
             start: 0,
             pos: 0,
@@ -122,7 +120,7 @@ impl Lexer {
     fn emit_error(&mut self, error: &str) -> Option<LexerState> {
         self.items.as_mut().unwrap().push_back(TokenItem {
             typ: TokenItemType::TokenError,
-            val: error.to_owned(),
+            val: format!("config: {}, {}", self.name, error),
             pos: self.pos,
         });
         return None;
@@ -178,7 +176,7 @@ impl Lexer {
         }
     }
 
-   pub fn next_item(&mut self) -> TokenItem {
+    pub fn next_item(&mut self) -> TokenItem {
         while self.state.is_some() {
             if self.items.is_none() {
                 return self.eof();
@@ -243,7 +241,7 @@ impl LexerStateMachine for Lexer {
             Some(LexerState::LexComment) => self.lex_comment(),
             Some(LexerState::LexConfig) => self.lex_config(),
             Some(LexerState::LexConfigType) => self.lex_config_type(),
-            Some(LexerState::LexKeyword) => self.lex_keyword(),
+            Some(LexerState::LexKeyWord) => self.lex_key_word(),
             Some(LexerState::LexList) => self.lex_list(),
             Some(LexerState::LexOption) => self.lex_option(),
             Some(LexerState::LexOptionName) => self.lex_option_name(),
@@ -256,15 +254,15 @@ impl LexerStateMachine for Lexer {
             None => None,
         }
     }
-    fn lex_keyword(&mut self) -> Option<LexerState> {
+    fn lex_key_word(&mut self) -> Option<LexerState> {
         self.accept_rune(" \t\n");
         self.ignore();
         match self.rest() {
             Some(curr) if curr.starts_with("#") => Some(LexerState::LexComment),
-            Some(curr) if curr.starts_with(Keyword::KwPackage) => Some(LexerState::LexPackage),
-            Some(curr) if curr.starts_with(Keyword::KwConfig) => Some(LexerState::LexConfig),
-            Some(curr) if curr.starts_with(Keyword::KwOption) => Some(LexerState::LexOption),
-            Some(curr) if curr.starts_with(Keyword::KwList) => Some(LexerState::LexList),
+            Some(curr) if curr.starts_with(KeyWord::KW_PACKAGE) => Some(LexerState::LexPackage),
+            Some(curr) if curr.starts_with(KeyWord::KW_CONFIG) => Some(LexerState::LexConfig),
+            Some(curr) if curr.starts_with(KeyWord::KW_OPTION) => Some(LexerState::LexOption),
+            Some(curr) if curr.starts_with(KeyWord::KW_LIST) => Some(LexerState::LexList),
             _ => {
                 if self.next_rune().is_none() {
                     self.emit(TokenItemType::TokenEOF);
@@ -279,11 +277,11 @@ impl LexerStateMachine for Lexer {
     fn lex_comment(&mut self) -> Option<LexerState> {
         self.accept_comment();
         self.ignore();
-        Some(LexerState::LexKeyword)
+        Some(LexerState::LexKeyWord)
     }
 
     fn lex_package(&mut self) -> Option<LexerState> {
-        self.pos += Keyword::KwPackage.len();
+        self.pos += KeyWord::KW_PACKAGE.len();
         self.emit(TokenItemType::TokenPackage);
         Some(LexerState::LexPackageName)
     }
@@ -304,7 +302,7 @@ impl LexerStateMachine for Lexer {
         }
     }
     fn lex_config(&mut self) -> Option<LexerState> {
-        self.pos += Keyword::KwConfig.len();
+        self.pos += KeyWord::KW_CONFIG.len();
         self.emit(TokenItemType::TokenConfig);
         self.consume_whitespace();
         Some(LexerState::LexConfigType)
@@ -329,18 +327,18 @@ impl LexerStateMachine for Lexer {
                 self.emit(TokenItemType::TokenString)
             }
         };
-        Some(LexerState::LexKeyword)
+        Some(LexerState::LexKeyWord)
     }
 
     fn lex_option(&mut self) -> Option<LexerState> {
-        self.pos += Keyword::KwOption.len();
+        self.pos += KeyWord::KW_OPTION.len();
         self.emit(TokenItemType::TokenOption);
         self.consume_whitespace();
         Some(LexerState::LexOptionName)
     }
 
     fn lex_list(&mut self) -> Option<LexerState> {
-        self.pos += Keyword::KwList.len();
+        self.pos += KeyWord::KW_LIST.len();
         self.emit(TokenItemType::TokenList);
         self.consume_whitespace();
         Some(LexerState::LexOptionName)
@@ -370,7 +368,7 @@ impl LexerStateMachine for Lexer {
             loop {
                 match self.next_rune() {
                     Some(r) if r == '\\' => {
-                        if let Some(r) = self.next_rune() {
+                        if let Some(_) = self.next_rune() {
                             return None;
                         } else {
                             return self.emit_error("unterminated quoted string");
@@ -390,7 +388,7 @@ impl LexerStateMachine for Lexer {
             }
             self.emit_string(TokenItemType::TokenString);
             self.consume_whitespace();
-            return Some(LexerState::LexKeyword);
+            return Some(LexerState::LexKeyWord);
         };
         None
     }
@@ -417,6 +415,6 @@ impl LexerStateMachine for Lexer {
         self.consume_whitespace();
         self.accept("\n");
         self.ignore();
-        Some(LexerState::LexKeyword)
+        Some(LexerState::LexKeyWord)
     }
 }

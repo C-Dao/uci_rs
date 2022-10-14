@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::VecDeque, sync::Arc, vec, rc::Rc};
+use std::{collections::VecDeque, vec};
 
 use crate::utils::{Error, Result};
 
@@ -184,7 +184,7 @@ impl ScannerStateMachine for Scanner {
             it if it.typ == TokenItemType::TokenConfig => Some(ScannerState::ScanSection),
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
             it if it.typ == TokenItemType::TokenEOF => None,
-            it => self.emit_error("expected package or config token"),
+            _ => self.emit_error("expected package or config token"),
         }
     }
 
@@ -238,7 +238,7 @@ impl ScannerStateMachine for Scanner {
 
     fn scan_list_name(&mut self) -> Option<ScannerState> {
         if self.accept(TokenItemType::TokenIdent) {
-            Some(ScannerState::ScanListName)
+            Some(ScannerState::ScanListValue)
         } else {
             self.emit_error("expected option name")
         }
@@ -252,7 +252,7 @@ impl ScannerStateMachine for Scanner {
                 Some(ScannerState::ScanOption)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
-            it => self.emit_error("expected option value"),
+            _ => self.emit_error("expected option value"),
         }
     }
 
@@ -264,32 +264,37 @@ impl ScannerStateMachine for Scanner {
                 Some(ScannerState::ScanOption)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
-            it => self.emit_error("expected option value"),
+            _ => self.emit_error("expected option value"),
         }
     }
 }
 
-fn parse(name: String, input: String) -> Result<UciConfig> {
-    match Scanner::new(&name, input).try_fold(
-        (UciConfig::new(&name), None),
-        |(mut cfg, mut sec):(UciConfig, Option<UciSection>), tok: Token| -> Result<(UciConfig, Option<UciSection>)> {
+pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
+    match Scanner::new(name, input).try_fold(
+        (UciConfig::new(name), None),
+        |(mut cfg, mut sec): (UciConfig, Option<UciSection>),
+         tok: Token|
+         -> Result<(UciConfig, Option<UciSection>)> {
             match tok.typ {
                 ScanTokenType::TokError => {
                     return Err(Error::new(format!("parse error: {}", tok.items[0].val)));
-                },
+                }
                 ScanTokenType::TokPackage => {
-                    return  Err(Error::new(
-                    "UCI imports/exports are not yet supported".to_string(),
-                ));
-            },
+                    return Err(Error::new(
+                        "UCI imports/exports are not yet supported".to_string(),
+                    ));
+                }
                 ScanTokenType::TokSection => {
                     let sec_typ = tok.items[0].val.to_string();
                     if tok.items.len() == 2 {
-                        sec = Some(cfg.merge(UciSection::new(sec_typ, tok.items[1].val.to_string())).clone());
+                        sec = Some(
+                            cfg.merge(UciSection::new(sec_typ, tok.items[1].val.to_string()))
+                                .clone(),
+                        );
                     } else {
                         sec = Some(cfg.add(UciSection::new(sec_typ, "".to_string())).clone());
                     }
-                },
+                }
                 ScanTokenType::TokOption => {
                     let name = tok.items[0].val.to_string();
                     let val = tok.items[1].val.to_string();
@@ -297,9 +302,11 @@ fn parse(name: String, input: String) -> Result<UciConfig> {
                     if let Some(opt) = sec.as_mut().unwrap().get_mut(&name) {
                         opt.set_values(vec![val]);
                     } else {
-                        sec.as_mut().map(|s| s.add(UciOption::new(name, UciOptionType::TypeOption, vec![val])));
+                        sec.as_mut().map(|s| {
+                            s.add(UciOption::new(name, UciOptionType::TypeOption, vec![val]))
+                        });
                     };
-                },
+                }
                 ScanTokenType::TokList => {
                     let name = tok.items[0].val.to_string();
                     let val = tok.items[1].val.to_string();
@@ -307,15 +314,17 @@ fn parse(name: String, input: String) -> Result<UciConfig> {
                     if let Some(opt) = sec.as_mut().unwrap().get_mut(&name) {
                         opt.merge_values(vec![val]);
                     } else {
-                        sec.as_mut().map(|s| s.add(UciOption::new(name, UciOptionType::TypeList, vec![val])));
+                        sec.as_mut().map(|s| {
+                            s.add(UciOption::new(name, UciOptionType::TypeList, vec![val]))
+                        });
                     };
-                },
-                ScanTokenType::TokEOF => {},
+                }
+                ScanTokenType::TokEOF => {}
             };
             Ok((cfg, sec))
         },
     ) {
-        Ok((cfg,_)) => Ok(cfg),
+        Ok((cfg, _)) => Ok(cfg),
         Err(err) => Err(err),
     }
 }

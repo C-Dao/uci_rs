@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq, Clone)]
 pub struct UciOption {
     pub name: String,
     pub values: Vec<String>,
     pub opt_type: UciOptionType,
 }
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq, Clone)]
 pub enum UciOptionType {
     TypeOption,
     TypeList,
@@ -26,12 +26,9 @@ impl UciOption {
         self.values = values;
     }
 
-    pub fn add_values(&mut self, value: String) {
-        self.values.push(value);
-    }
-
     pub fn merge_values(&mut self, values: Vec<String>) {
-        let set: HashSet<String> = HashSet::from_iter([values, self.values.clone()].concat().into_iter());
+        let set: HashSet<String> =
+            HashSet::from_iter([values, self.values.clone()].concat().into_iter());
 
         self.values = set.into_iter().collect();
     }

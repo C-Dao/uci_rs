@@ -1,5 +1,5 @@
 use std::env;
-use std::ffi::{OsStr, OsString};
+use std::ffi::{OsString};
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -45,12 +45,12 @@ pub struct TempFile<F = File> {
 }
 
 impl TempFile<File> {
-    const random_len: usize = NUM_RAND_CHARS;
-    const prefix: &'static str = ".tmp";
-    const suffix: &'static str = "";
-    const append: bool = false;
+    const RANDOM_LEN: usize = NUM_RAND_CHARS;
+    const PREFIX: &'static str = ".tmp";
+    const SUFFIX: &'static str = "";
+    const APPEND: bool = false;
     pub fn new<P: AsRef<Path>>(dir: P) -> io::Result<TempFile> {
-        let num_retries = if Self::random_len != 0 {
+        let num_retries = if Self::RANDOM_LEN != 0 {
             NUM_RETRIES
         } else {
             1
@@ -58,7 +58,7 @@ impl TempFile<File> {
 
         for _ in 0..num_retries {
             let path = dir.as_ref().join(Self::tmp_name());
-            return match create_named(path, OpenOptions::new().append(Self::append)) {
+            return match create_named(path, OpenOptions::new().append(Self::APPEND)) {
                 Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
                 Err(ref e) if e.kind() == io::ErrorKind::AddrInUse => continue,
                 res => res,
@@ -73,13 +73,13 @@ impl TempFile<File> {
 
     fn tmp_name() -> OsString {
         let mut buf =
-            OsString::with_capacity(Self::prefix.len() + Self::suffix.len() + Self::random_len);
-        buf.push(Self::prefix);
+            OsString::with_capacity(Self::PREFIX.len() + Self::SUFFIX.len() + Self::RANDOM_LEN);
+        buf.push(Self::PREFIX);
         let mut char_buf = [0u8; 4];
-        for c in repeat_with(fastrand::alphanumeric).take(Self::random_len) {
+        for c in repeat_with(fastrand::alphanumeric).take(Self::RANDOM_LEN) {
             buf.push(c.encode_utf8(&mut char_buf));
         }
-        buf.push(Self::suffix);
+        buf.push(Self::SUFFIX);
         buf
     }
 }
