@@ -60,7 +60,7 @@ impl Scanner {
 
     fn eof(&self) -> Token {
         return Token {
-            typ: ScanTokenType::TokEOF,
+            typ: ScanTokenType::TokenEOF,
             items: vec![],
         };
     }
@@ -119,7 +119,7 @@ impl Scanner {
 
     fn emit_error(&mut self, error: &str) -> Option<ScannerState> {
         self.tokens.as_mut().unwrap().push_back(Token {
-            typ: ScanTokenType::TokError,
+            typ: ScanTokenType::TokenError,
             items: vec![TokenItem {
                 typ: TokenItemType::TokenError,
                 val: error.to_owned(),
@@ -139,8 +139,8 @@ impl Iterator for Scanner {
             } else {
                 match self.tokens.as_mut().unwrap().pop_front() {
                     Some(tok) => {
-                        if tok.typ == ScanTokenType::TokError
-                            || tok.typ == ScanTokenType::TokPackage
+                        if tok.typ == ScanTokenType::TokenError
+                            || tok.typ == ScanTokenType::TokenPackage
                         {
                             self.stop();
                         };
@@ -150,7 +150,7 @@ impl Iterator for Scanner {
                         self.state = self.action();
                         if self.state.is_none() {
                             let tok = self.stop();
-                            if tok.typ == ScanTokenType::TokEOF {
+                            if tok.typ == ScanTokenType::TokenEOF {
                                 return None;
                             } else {
                                 return Some(tok);
@@ -192,7 +192,7 @@ impl ScannerStateMachine for Scanner {
         match self.next_item() {
             it if it.typ == TokenItemType::TokenString => {
                 self.curr.push(it);
-                self.emit(ScanTokenType::TokPackage);
+                self.emit(ScanTokenType::TokenPackage);
                 Some(ScannerState::ScanStart)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
@@ -208,7 +208,7 @@ impl ScannerStateMachine for Scanner {
                 if tok.typ == TokenItemType::TokenString {
                     self.accept(TokenItemType::TokenString);
                 };
-                self.emit(ScanTokenType::TokSection);
+                self.emit(ScanTokenType::TokenSection);
                 Some(ScannerState::ScanOption)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
@@ -248,7 +248,7 @@ impl ScannerStateMachine for Scanner {
         match self.next_item() {
             it if it.typ == TokenItemType::TokenString => {
                 self.curr.push(it);
-                self.emit(ScanTokenType::TokOption);
+                self.emit(ScanTokenType::TokenOption);
                 Some(ScannerState::ScanOption)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
@@ -260,7 +260,7 @@ impl ScannerStateMachine for Scanner {
         match self.next_item() {
             it if it.typ == TokenItemType::TokenString => {
                 self.curr.push(it);
-                self.emit(ScanTokenType::TokList);
+                self.emit(ScanTokenType::TokenList);
                 Some(ScannerState::ScanOption)
             }
             it if it.typ == TokenItemType::TokenError => self.emit_error(&it.val),
@@ -276,15 +276,15 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
          tok: Token|
          -> Result<(UciConfig, Option<UciSection>)> {
             match tok.typ {
-                ScanTokenType::TokError => {
+                ScanTokenType::TokenError => {
                     return Err(Error::new(format!("parse error: {}", tok.items[0].val)));
                 }
-                ScanTokenType::TokPackage => {
+                ScanTokenType::TokenPackage => {
                     return Err(Error::new(
                         "UCI imports/exports are not yet supported".to_string(),
                     ));
                 }
-                ScanTokenType::TokSection => {
+                ScanTokenType::TokenSection => {
                     let sec_typ = tok.items[0].val.to_string();
                     if tok.items.len() == 2 {
                         sec = Some(
@@ -295,7 +295,7 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                         sec = Some(cfg.add(UciSection::new(sec_typ, "".to_string())).clone());
                     }
                 }
-                ScanTokenType::TokOption => {
+                ScanTokenType::TokenOption => {
                     let name = tok.items[0].val.to_string();
                     let val = tok.items[1].val.to_string();
 
@@ -307,7 +307,7 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                         });
                     };
                 }
-                ScanTokenType::TokList => {
+                ScanTokenType::TokenList => {
                     let name = tok.items[0].val.to_string();
                     let val = tok.items[1].val.to_string();
 
@@ -319,7 +319,7 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                         });
                     };
                 }
-                ScanTokenType::TokEOF => {}
+                ScanTokenType::TokenEOF => {}
             };
             Ok((cfg, sec))
         },

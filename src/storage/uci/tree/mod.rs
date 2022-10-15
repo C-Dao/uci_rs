@@ -19,8 +19,8 @@ use self::uci_section::UciSection;
 
 
 pub struct UciTree {
-    dir: Box<Path>,
-    configs: HashMap<String, UciConfig>,
+    pub dir: Box<Path>,
+    pub configs: HashMap<String, UciConfig>,
     lock: Mutex<bool>,
 }
 

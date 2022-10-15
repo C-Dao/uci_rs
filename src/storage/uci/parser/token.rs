@@ -76,33 +76,33 @@ impl fmt::Display for TokenItem {
 
 #[derive(PartialEq)]
 pub enum ScanTokenType {
-    TokError = 0,
-    TokEOF,
-    TokPackage,
-    TokSection,
-    TokOption,
-    TokList,
+    TokenError = 0,
+    TokenEOF,
+    TokenPackage,
+    TokenSection,
+    TokenOption,
+    TokenList,
 }
 
 impl fmt::Display for ScanTokenType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::TokError => {
+            Self::TokenError => {
                 write!(f, "error")
             }
-            Self::TokEOF => {
+            Self::TokenEOF => {
                 write!(f, "eof")
             }
-            Self::TokList => {
+            Self::TokenList => {
                 write!(f, "list")
             }
-            Self::TokOption => {
+            Self::TokenOption => {
                 write!(f, "option")
             }
-            Self::TokPackage => {
+            Self::TokenPackage => {
                 write!(f, "package")
             }
-            Self::TokSection => {
+            Self::TokenSection => {
                 write!(f, "config")
             }
         }
@@ -117,5 +117,56 @@ pub struct Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {:?}", self.typ, self.items)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn token_item_type_to_string() {
+        assert_eq!(TokenItemType::TokenEOF.to_string(), "EOF");
+        assert_eq!(TokenItemType::TokenConfig.to_string(), "Config");
+        assert_eq!(TokenItemType::TokenError.to_string(), "Error");
+        assert_eq!(TokenItemType::TokenIdent.to_string(), "Ident");
+        assert_eq!(TokenItemType::TokenList.to_string(), "List");
+        assert_eq!(TokenItemType::TokenOption.to_string(), "Option");
+        assert_eq!(TokenItemType::TokenPackage.to_string(), "Package");
+        assert_eq!(TokenItemType::TokenString.to_string(), "String");
+    }
+    #[test]
+    fn scan_token_to_string() {
+        assert_eq!(ScanTokenType::TokenEOF.to_string(), "eof");
+        assert_eq!(ScanTokenType::TokenError.to_string(), "error");
+        assert_eq!(ScanTokenType::TokenList.to_string(), "list");
+        assert_eq!(ScanTokenType::TokenOption.to_string(), "option");
+        assert_eq!(ScanTokenType::TokenPackage.to_string(), "package");
+        assert_eq!(ScanTokenType::TokenSection.to_string(), "config");
+    }
+    #[test]
+    fn token_item_to_string() {
+        let token_item = TokenItem {
+            typ: TokenItemType::TokenOption,
+            val: format!("network wlan"),
+            pos: 0,
+        };
+        assert_eq!(token_item.to_string(), "(Option \"network wlan\" 0)");
+    }
+
+    #[test]
+    fn token_to_string(){
+        let token = Token {
+            typ: ScanTokenType::TokenPackage,
+            items: vec![
+                TokenItem {
+                    typ: TokenItemType::TokenIdent,
+                    val: format!("network"),
+                    pos: 0,
+                }
+            ]
+           
+        };
+        assert_eq!(token.to_string(), "package [TokenItem { typ: TokenIdent, val: \"network\", pos: 0 }]");
+    
     }
 }
