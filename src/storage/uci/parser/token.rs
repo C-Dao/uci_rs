@@ -74,7 +74,7 @@ impl fmt::Display for TokenItem {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ScanTokenType {
     TokenError = 0,
     TokenEOF,
@@ -109,6 +109,7 @@ impl fmt::Display for ScanTokenType {
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub typ: ScanTokenType,
     pub items: Vec<TokenItem>,
@@ -154,19 +155,18 @@ mod test {
     }
 
     #[test]
-    fn token_to_string(){
+    fn token_to_string() {
         let token = Token {
             typ: ScanTokenType::TokenPackage,
-            items: vec![
-                TokenItem {
-                    typ: TokenItemType::TokenIdent,
-                    val: format!("network"),
-                    pos: 0,
-                }
-            ]
-           
+            items: vec![TokenItem {
+                typ: TokenItemType::TokenIdent,
+                val: format!("network"),
+                pos: 0,
+            }],
         };
-        assert_eq!(token.to_string(), "package [TokenItem { typ: TokenIdent, val: \"network\", pos: 0 }]");
-    
+        assert_eq!(
+            token.to_string(),
+            "package [TokenItem { typ: TokenIdent, val: \"network\", pos: 0 }]"
+        );
     }
 }

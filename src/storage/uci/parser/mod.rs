@@ -328,3 +328,666 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
         Err(err) => Err(err),
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parser() {
+        let test_cases = vec![
+            (
+                "empty1",
+                format!(""),
+                vec![]
+            ),
+            (
+                "empty2",
+                format!("  \n\t\n\n \n "),
+                vec![]
+            ),
+            (
+                "simple",
+                format!("config sectiontype 'sectionname' \n\t option optionname 'optionvalue'\n"),
+                vec![
+                    Token {
+                        typ:ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("sectiontype"),
+                                pos: 0,
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("sectionname"),
+                                pos: 0,
+                            },
+                        ],
+                    },
+                    Token {
+                        typ:ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("optionname"),
+                                pos: 0,
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("optionvalue"),
+                                pos: 0,
+                            },
+                        ],
+                    }
+                ]
+            ),
+            (
+                "export",
+                format!("package \"pkgname\"\n config empty \n config squoted 'sqname'\n config dquoted \"dqname\"\n config multiline 'line1\\\n\tline2'\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenPackage,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("pkgname"), pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("empty"), pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ:ScanTokenType::TokenSection,
+                        items:vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("squoted"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("sqname"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("dquoted"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("dqname"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("multiline"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("line1\\\n\tline2"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                ]
+            ),
+            (
+                "unquoted",
+                format!("config foo bar\noption answer 42\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("bar"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("answer"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("42"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                ]
+            ),
+            (
+                "unnamed",
+                format!("\nconfig foo named\n\toption pos '0'\n\toption unnamed '0'\n\tlist list 0\n\nconfig foo\n\toption pos '1'\n\toption unnamed '1'\n\tlist list 10\n\nconfig foo\n\toption pos '2'\n\toption unnamed '1'\n\tlist list 20\n\nconfig foo named\n\toption pos '3'\n\toption unnamed '0'\n\tlist list 30\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("named"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("pos"),
+                                pos: 0
+                            },
+                            TokenItem{
+                                typ: TokenItemType::TokenString,
+                                val: format!("0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("unnamed"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenList,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("list"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("pos"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("1"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("unnamed"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("1"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenList,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("list"), pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("10"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("pos"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("2"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("unnamed"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("1"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenList,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("list"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("20"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("named"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("pos"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("3"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("unnamed"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenList,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("list"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("30"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                ]
+            ),
+            (
+                "hyphenated",
+                format!("\nconfig wifi-device wl0\n\toption type 'broadcom'\n\toption channel '6'\n\nconfig wifi-iface wifi0\n\toption device 'wl0'\n\toption mode 'ap'\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("wifi-device"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("wl0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("type"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("broadcom"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("channel"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("6"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token{
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("wifi-iface"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("wifi0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("device"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("wl0"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("mode"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("ap"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                ]
+            ),
+            (
+                "commented",
+                format!("\n# heading\n\n# another heading\nconfig foo\n\toption opt1 1\n\t# option opt1 2\n\toption opt2 3 # baa\n\toption opt3 hello\n\n# a comment block spanning\n# multiple lines, surrounded\n# by empty lines\n\n# eof\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("opt1"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("1"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("opt2"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("3"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("opt3"),
+                                pos: 0
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("hello"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                ]
+            ),
+            (
+                "invalid",
+                format!("\n<?xml version=\"1.0\">\n<error message=\"not a UCI file\" />\n"),
+                vec![
+                    Token{
+                        typ: ScanTokenType::TokenError,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenError,
+                                val: format!("config: invalid, expected keyword (package, config, option, list) or eof"),
+                                pos: 0
+                            }
+                        ]
+                    },
+                ],
+            ),
+            (
+                "pkg invalid",
+                format!("\n package\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenError,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenError,
+                                val: format!("config: pkg invalid, incomplete package name"),
+                                pos: 0
+                            },
+                        ]
+                    }
+                ],
+            ),
+            (
+                "unterminated quoted string",
+                format!("\nconfig foo \"bar\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenError,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenError,
+                                val: format!("config: unterminated quoted string, unterminated quoted string"),
+                                pos: 0
+                            }
+                        ]
+                    }
+                ]
+            ),
+            (
+                "unterminated unquoted string",
+                format!("\nconfig foo\n\toption opt opt\\\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("foo"),
+                                pos: 0
+                            },
+                        ]
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenError,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenError,
+                                val: format!("config: unterminated unquoted string, unterminated unquoted string"),
+                                pos: 0
+                            },
+                        ]
+                    }
+                ]
+            ),
+        ];
+
+        for test_case in test_cases {
+            let (name, input, expected) = test_case;
+            let mut idx = 0;
+            let mut scanner = Scanner::new(name, input);
+            loop {
+                if let Some(ref token) = scanner.next() {
+                    assert_eq!(token.typ, expected[idx].typ);
+                    token
+                        .items
+                        .iter()
+                        .zip(&expected[idx].items)
+                        .for_each(|(t1, t2)| {
+                            assert_eq!(t1.typ, t2.typ);
+                            assert_eq!(t1.val, t2.val);
+                        });
+                    println!("{}", idx);
+                    idx += 1;
+                } else {
+                    break;
+                }
+            }
+
+            // assert_eq!(expected.len(), idx);
+        }
+    }
+}

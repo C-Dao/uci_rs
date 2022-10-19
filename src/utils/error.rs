@@ -3,8 +3,8 @@ use json::{object, JsonValue};
 
 use std::convert::From;
 use std::fs::File;
-use std::{io, error, fmt};
 use std::path::PathBuf;
+use std::{error, fmt, io};
 
 use super::tempfile::TempFile;
 

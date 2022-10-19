@@ -1,5 +1,5 @@
 use std::env;
-use std::ffi::{OsString};
+use std::ffi::OsString;
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};

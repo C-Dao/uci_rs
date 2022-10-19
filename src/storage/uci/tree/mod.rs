@@ -12,11 +12,10 @@ use std::sync::Mutex;
 use crate::utils::tempfile::TempFile;
 use crate::utils::{Error, Result};
 
-use super::parser::uci_parse;
 use self::uci_config::UciConfig;
 use self::uci_option::{UciOption, UciOptionType};
 use self::uci_section::UciSection;
-
+use super::parser::uci_parse;
 
 pub struct UciTree {
     pub dir: Box<Path>,
@@ -43,7 +42,7 @@ impl UciTree {
 
         file.read_to_string(&mut string_buffer)?;
 
-        let cfg = uci_parse(&name,string_buffer)?;
+        let cfg = uci_parse(&name, string_buffer)?;
 
         self.configs.insert(name.to_string(), cfg);
 
