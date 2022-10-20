@@ -200,17 +200,14 @@ impl Lexer {
     pub fn next_item(&mut self) -> TokenItem {
         while self.state.is_some() {
             if self.items.is_none() {
-                return self.eof();
+                return self.stop();
             } else if let Some(it) = self.items.as_mut().unwrap().pop_front() {
                 return it;
             } else {
                 self.state = self.action();
-                if self.state.is_none() {
-                    return self.stop();
-                }
             }
-        }
-        self.eof()
+        };
+        self.stop()
     }
 
     pub fn stop(&mut self) -> TokenItem {
@@ -218,10 +215,9 @@ impl Lexer {
         if self.items.is_none() {
             return it;
         } else {
-            if self.items.as_ref().unwrap().len() > 0 {
-                it = self.items.as_mut().unwrap().pop_front().unwrap();
+            if let Some(last_it) = self.items.as_mut().unwrap().pop_front() {
+                it = last_it;
             }
-
             self.items = None;
             return it;
         }

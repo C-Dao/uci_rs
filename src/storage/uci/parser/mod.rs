@@ -36,6 +36,7 @@ trait ScannerStateMachine {
     fn scan_option_value(&mut self) -> Option<ScannerState>;
 }
 
+#[derive(Debug)]
 enum ScannerState {
     ScanStart,
     ScanPackage,
@@ -58,25 +59,18 @@ impl Scanner {
         }
     }
 
-    fn eof(&self) -> Token {
-        return Token {
-            typ: ScanTokenType::TokenEOF,
-            items: vec![],
-        };
+    fn eof(&self) -> Option<Token> {
+        None
     }
 
-    fn stop(&mut self) -> Token {
+    fn stop(&mut self) -> Option<Token> {
         let mut tok = self.eof();
         if self.tokens.is_none() {
             return tok;
         } else {
             self.lexer.stop();
-            if self.tokens.as_ref().unwrap().len() > 0 {
-                tok = self.tokens.as_mut().unwrap().pop_front().unwrap();
-            }
-
+            tok = self.tokens.as_mut().unwrap().pop_front();
             self.tokens = None;
-
             return tok;
         }
     }
@@ -99,14 +93,15 @@ impl Scanner {
         self.last = Some((*it).clone());
     }
 
-    fn accept(&mut self, it: TokenItemType) -> bool {
+    fn accept_once(&mut self, it: TokenItemType) -> bool {
         let tok = self.next_item();
         if tok.typ == it {
             self.curr.push(tok);
             return true;
+        } else {
+            self.backup(&tok);
+            return false;
         }
-        self.backup(&tok);
-        return false;
     }
 
     fn emit(&mut self, typ: ScanTokenType) {
@@ -136,31 +131,13 @@ impl Iterator for Scanner {
         while self.state.is_some() {
             if self.tokens.is_none() {
                 return None;
+            } else if let Some(token) = self.tokens.as_mut().unwrap().pop_front() {
+                return Some(token);
             } else {
-                match self.tokens.as_mut().unwrap().pop_front() {
-                    Some(tok) => {
-                        if tok.typ == ScanTokenType::TokenError
-                            || tok.typ == ScanTokenType::TokenPackage
-                        {
-                            self.stop();
-                        };
-                        return Some(tok);
-                    }
-                    None => {
-                        self.state = self.action();
-                        if self.state.is_none() {
-                            let tok = self.stop();
-                            if tok.typ == ScanTokenType::TokenEOF {
-                                return None;
-                            } else {
-                                return Some(tok);
-                            }
-                        }
-                    }
-                }
+                self.state = self.action();
             }
         }
-        None
+        self.stop()
     }
 }
 
@@ -206,7 +183,7 @@ impl ScannerStateMachine for Scanner {
                 self.curr.push(it);
                 let tok = self.peek();
                 if tok.typ == TokenItemType::TokenString {
-                    self.accept(TokenItemType::TokenString);
+                    self.accept_once(TokenItemType::TokenString);
                 };
                 self.emit(ScanTokenType::TokenSection);
                 Some(ScannerState::ScanOption)
@@ -229,7 +206,7 @@ impl ScannerStateMachine for Scanner {
     }
 
     fn scan_option_name(&mut self) -> Option<ScannerState> {
-        if self.accept(TokenItemType::TokenIdent) {
+        if self.accept_once(TokenItemType::TokenIdent) {
             Some(ScannerState::ScanOptionValue)
         } else {
             self.emit_error("expected option name")
@@ -237,7 +214,7 @@ impl ScannerStateMachine for Scanner {
     }
 
     fn scan_list_name(&mut self) -> Option<ScannerState> {
-        if self.accept(TokenItemType::TokenIdent) {
+        if self.accept_once(TokenItemType::TokenIdent) {
             Some(ScannerState::ScanListValue)
         } else {
             self.emit_error("expected option name")
@@ -270,7 +247,8 @@ impl ScannerStateMachine for Scanner {
 }
 
 pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
-    match Scanner::new(name, input).try_fold(
+    let mut scanner = Scanner::new(name, input);
+    match scanner.try_fold(
         (UciConfig::new(name), None),
         |(mut cfg, mut sec): (UciConfig, Option<UciSection>),
          tok: Token|
@@ -281,7 +259,7 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                 }
                 ScanTokenType::TokenPackage => {
                     return Err(Error::new(
-                        "UCI imports/exports are not yet supported".to_string(),
+                        "UCI packages syntax are not yet supported".to_string(),
                     ));
                 }
                 ScanTokenType::TokenSection => {
@@ -325,7 +303,10 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
         },
     ) {
         Ok((cfg, _)) => Ok(cfg),
-        Err(err) => Err(err),
+        Err(err) => {
+            scanner.stop();
+            Err(err)
+        }
     }
 }
 
@@ -351,7 +332,7 @@ mod test {
                 format!("config sectiontype 'sectionname' \n\t option optionname 'optionvalue'\n"),
                 vec![
                     Token {
-                        typ:ScanTokenType::TokenSection,
+                        typ: ScanTokenType::TokenSection,
                         items: vec![
                             TokenItem {
                                 typ: TokenItemType::TokenIdent,
@@ -366,7 +347,7 @@ mod test {
                         ],
                     },
                     Token {
-                        typ:ScanTokenType::TokenOption,
+                        typ: ScanTokenType::TokenOption,
                         items: vec![
                             TokenItem {
                                 typ: TokenItemType::TokenIdent,
@@ -379,8 +360,8 @@ mod test {
                                 pos: 0,
                             },
                         ],
-                    }
-                ]
+                    },
+                ],
             ),
             (
                 "export",
@@ -968,26 +949,21 @@ mod test {
         for test_case in test_cases {
             let (name, input, expected) = test_case;
             let mut idx = 0;
-            let mut scanner = Scanner::new(name, input);
-            loop {
-                if let Some(ref token) = scanner.next() {
-                    assert_eq!(token.typ, expected[idx].typ);
-                    token
-                        .items
-                        .iter()
-                        .zip(&expected[idx].items)
-                        .for_each(|(t1, t2)| {
-                            assert_eq!(t1.typ, t2.typ);
-                            assert_eq!(t1.val, t2.val);
-                        });
-                    println!("{}", idx);
-                    idx += 1;
-                } else {
-                    break;
-                }
+            let scanner = Scanner::new(name, input);
+            for token in scanner {
+                assert_eq!(token.typ, expected[idx].typ);
+                token
+                    .items
+                    .iter()
+                    .zip(&expected[idx].items)
+                    .for_each(|(t1, t2)| {
+                        assert_eq!(t1.typ, t2.typ);
+                        assert_eq!(t1.val, t2.val);
+                    });
+                idx += 1;
             }
 
-            // assert_eq!(expected.len(), idx);
+            assert_eq!(expected.len(), idx);
         }
     }
 }
