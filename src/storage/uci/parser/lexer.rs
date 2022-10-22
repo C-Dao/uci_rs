@@ -232,7 +232,7 @@ impl Lexer {
     }
 
     fn emit_string(&mut self, t: TokenItemType) {
-        if self.pos - 1 > self.start + 1 {
+        if self.pos - 1 >= self.start + 1 {
             self.items.as_mut().unwrap().push_back(TokenItem {
                 typ: t,
                 val: self

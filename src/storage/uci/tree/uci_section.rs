@@ -22,8 +22,12 @@ impl UciSection {
 
     pub fn merge(&mut self, option: UciOption) {
         for opt in self.options.iter_mut() {
-            if opt.name == option.name {
+            if opt.name == option.name && opt.opt_type == option.opt_type {
                 opt.merge_values(option.values);
+                return;
+            } else if opt.name == option.name && opt.opt_type != option.opt_type {
+                opt.set_type(option.opt_type);
+                opt.set_values(option.values);
                 return;
             }
         }
@@ -55,5 +59,122 @@ impl UciSection {
 
     pub fn get_mut(&mut self, name: &str) -> Option<&mut UciOption> {
         self.options.iter_mut().find(|opt| opt.name == name)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::storage::uci::tree::uci_option::UciOptionType;
+
+    #[test]
+    fn test_section_merge() {
+        let test_cases = vec![
+            (
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeOption,
+                        vec![format!("3")],
+                    )],
+                },
+                UciOption::new(
+                    format!("pos"),
+                    UciOptionType::TypeOption,
+                    vec![format!("14")],
+                ),
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeOption,
+                        vec![format!("14")],
+                    )],
+                },
+            ),
+            (
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeOption,
+                        vec![format!("3")],
+                    )],
+                },
+                UciOption::new(
+                    format!("pos"),
+                    UciOptionType::TypeList,
+                    vec![format!("14"), format!("3")],
+                ),
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeList,
+                        vec![format!("14"), format!("3")],
+                    )],
+                },
+            ),
+            (
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeList,
+                        vec![format!("3"), format!("5")],
+                    )],
+                },
+                UciOption::new(
+                    format!("pos"),
+                    UciOptionType::TypeOption,
+                    vec![format!("14")],
+                ),
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeOption,
+                        vec![format!("14")],
+                    )],
+                },
+            ),
+            (
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeList,
+                        vec![format!("3"), format!("5")],
+                    )],
+                },
+                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("14")]),
+                UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeList,
+                        vec![format!("3"), format!("5"), format!("14")],
+                    )],
+                },
+            ),
+        ];
+
+        for (mut sec, val, expected) in test_cases {
+            sec.merge(val);
+            assert_eq!(sec, expected);
+        }
+    }
+    #[test]
+    fn test_section_del() {
+        todo!()
     }
 }

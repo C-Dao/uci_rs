@@ -342,6 +342,42 @@ mod test {
                 vec![]
             ),
             (
+                "empty option",
+                format!("config sectiontype 'sectionname' \n\t option optionname ''\n"),
+                vec![
+                    Token {
+                        typ: ScanTokenType::TokenSection,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("sectiontype"),
+                                pos: 0,
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!("sectionname"),
+                                pos: 0,
+                            },
+                        ],
+                    },
+                    Token {
+                        typ: ScanTokenType::TokenOption,
+                        items: vec![
+                            TokenItem {
+                                typ: TokenItemType::TokenIdent,
+                                val: format!("optionname"),
+                                pos: 0,
+                            },
+                            TokenItem {
+                                typ: TokenItemType::TokenString,
+                                val: format!(""),
+                                pos: 0,
+                            },
+                        ],
+                    },
+                ],
+            ),
+            (
                 "simple",
                 format!("config sectiontype 'sectionname' \n\t option optionname 'optionvalue'\n"),
                 vec![

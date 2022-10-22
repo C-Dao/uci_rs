@@ -26,17 +26,67 @@ impl UciOption {
         self.values = values;
     }
 
+    pub fn set_type(&mut self, typ: UciOptionType) {
+        self.opt_type = typ;
+    }
+
+
     pub fn merge_values(&mut self, values: Vec<String>) {
         match self.opt_type {
             UciOptionType::TypeOption => {
                 self.set_values(values);
             }
             UciOptionType::TypeList => {
-                let set: HashSet<String> =
-                    HashSet::from_iter([values, self.values.clone()].concat().into_iter());
+                let set: HashSet<String> = HashSet::from_iter(self.values.clone().into_iter());
 
-                self.values = set.into_iter().collect();
+                for v in values {
+                    if set.contains(&v) {
+                        continue;
+                    } else {
+                        self.values.push(v);
+                    }
+                }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    #[test]
+    fn test_option_merge_values() {
+        let test_cases = vec![
+            (
+                UciOption::new(
+                    format!("pos"),
+                    UciOptionType::TypeOption,
+                    vec![format!("3")],
+                ),
+                vec![format!("5")],
+                vec![format!("5")],
+            ),
+            (
+                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("3")]),
+                vec![format!("5")],
+                vec![format!("3"), format!("5")],
+            ),
+            (
+                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("3")]),
+                vec![],
+                vec![format!("3")],
+            ),
+            (
+                UciOption::new(format!("pos"), UciOptionType::TypeOption, vec![format!("3")]),
+                vec![],
+                vec![],
+            ),
+        ];
+
+        for (mut opt, val, expected) in test_cases {
+            opt.merge_values(val);
+            assert_eq!(opt.values, expected);
         }
     }
 }

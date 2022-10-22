@@ -486,4 +486,15 @@ mod test {
             }
         }
     }
+
+    #[test]
+    fn test_config_del(){
+        todo!()
+    }
+
+    #[test]
+    fn test_config_save(){
+        todo!()
+    }
+
 }
