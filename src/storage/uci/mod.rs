@@ -15,7 +15,7 @@ pub fn init_default_tree() -> UciTree {
 mod test {
     use super::*;
     #[test]
-    fn init_uci_tree() {
+    fn test_init_default_tree() {
         let tree = init_default_tree();
         assert_eq!(tree.dir.to_str().unwrap(), DEFAULT_TREE_PATH);
     }

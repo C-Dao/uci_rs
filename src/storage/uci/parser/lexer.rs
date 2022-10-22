@@ -434,7 +434,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn lexer() {
+    fn test_lexer() {
         let test_cases = vec![
             (
                 "empty1", 

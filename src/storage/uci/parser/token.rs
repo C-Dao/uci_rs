@@ -77,7 +77,6 @@ impl fmt::Display for TokenItem {
 #[derive(PartialEq, Debug)]
 pub enum ScanTokenType {
     TokenError = 0,
-    TokenEOF,
     TokenPackage,
     TokenSection,
     TokenOption,
@@ -89,9 +88,6 @@ impl fmt::Display for ScanTokenType {
         match self {
             Self::TokenError => {
                 write!(f, "error")
-            }
-            Self::TokenEOF => {
-                write!(f, "eof")
             }
             Self::TokenList => {
                 write!(f, "list")
@@ -125,7 +121,7 @@ impl fmt::Display for Token {
 mod test {
     use super::*;
     #[test]
-    fn token_item_type_to_string() {
+    fn test_token_item_type_to_string() {
         assert_eq!(TokenItemType::TokenEOF.to_string(), "EOF");
         assert_eq!(TokenItemType::TokenConfig.to_string(), "Config");
         assert_eq!(TokenItemType::TokenError.to_string(), "Error");
@@ -136,8 +132,7 @@ mod test {
         assert_eq!(TokenItemType::TokenString.to_string(), "String");
     }
     #[test]
-    fn scan_token_to_string() {
-        assert_eq!(ScanTokenType::TokenEOF.to_string(), "eof");
+    fn test_scan_token_to_string() {
         assert_eq!(ScanTokenType::TokenError.to_string(), "error");
         assert_eq!(ScanTokenType::TokenList.to_string(), "list");
         assert_eq!(ScanTokenType::TokenOption.to_string(), "option");
@@ -145,7 +140,7 @@ mod test {
         assert_eq!(ScanTokenType::TokenSection.to_string(), "config");
     }
     #[test]
-    fn token_item_to_string() {
+    fn test_token_item_to_string() {
         let token_item = TokenItem {
             typ: TokenItemType::TokenOption,
             val: format!("network wlan"),
@@ -155,7 +150,7 @@ mod test {
     }
 
     #[test]
-    fn token_to_string() {
+    fn test_token_to_string() {
         let token = Token {
             typ: ScanTokenType::TokenPackage,
             items: vec![TokenItem {

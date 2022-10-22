@@ -1,6 +1,6 @@
 use super::uci_option::UciOption;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct UciSection {
     pub name: String,
     pub sec_type: String,
