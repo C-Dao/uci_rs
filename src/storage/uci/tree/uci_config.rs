@@ -102,6 +102,10 @@ impl UciConfig {
     pub fn write_in(&self, file: &mut TempFile) -> Result<()> {
         let mut buf = BufWriter::new(file);
 
+        if self.pkg_name != "" {
+            buf.write_fmt(format_args!("\npackage '{}'\n", self.pkg_name))?;
+        }
+
         for sec in self.sections.iter() {
             if sec.name == "" {
                 buf.write_fmt(format_args!("\nconfig {}\n", sec.sec_type))?;
@@ -131,7 +135,7 @@ impl UciConfig {
         if section.name != "" {
             return section.name.clone();
         }
-        format!("{}[{}]", section.sec_type, self._index(section).unwrap())
+        format!("@{}[{}]", section.sec_type, self._index(section).unwrap())
     }
 
     pub fn get(&self, name: &str) -> Result<Option<&UciSection>> {
@@ -174,12 +178,13 @@ impl UciConfig {
     }
 
     pub fn del(&mut self, name: &str) {
-        let idx = self
+        if let Some(idx) = self
             .sections
             .iter()
-            .position(|sec| sec.name == name)
-            .unwrap();
-        self.sections.remove(idx);
+            .position(|sec| self.get_section_name(sec) == name)
+        {
+            self.sections.remove(idx);
+        };
     }
 }
 
@@ -246,9 +251,11 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
 
 #[cfg(test)]
 mod test {
-    use crate::storage::uci::{parser::uci_parse, tree::uci_option::UciOption};
+    use std::path::Path;
 
     use super::*;
+    use crate::storage::uci::{parser::uci_parse, tree::uci_option::UciOption};
+    use crate::utils::tempfile::TempFile;
     #[test]
     fn test_unmangle_section_name() {
         let test_cases = vec![
@@ -488,13 +495,86 @@ mod test {
     }
 
     #[test]
-    fn test_config_del(){
-        todo!()
+    fn test_config_del() {
+        let test_cases = vec![
+            (
+                UciConfig {
+                    name: "test_config".to_owned(),
+                    pkg_name: "test_config".to_owned(),
+                    sections: vec![UciSection {
+                        name: format!("named"),
+                        sec_type: format!("foo"),
+                        options: vec![],
+                    }],
+                    modified: false,
+                },
+                "named",
+                None,
+            ),
+            (
+                UciConfig {
+                    name: "test_config".to_owned(),
+                    pkg_name: "test_config".to_owned(),
+                    sections: vec![UciSection {
+                        name: "".to_string(),
+                        sec_type: format!("foo"),
+                        options: vec![],
+                    }],
+                    modified: false,
+                },
+                "@foo[0]",
+                None,
+            ),
+        ];
+
+        for (mut cfg, del_name, expected) in test_cases {
+            cfg.del(del_name);
+            if let Ok(sec) = cfg.get(del_name) {
+                assert_eq!(sec, expected);
+            };
+        }
     }
 
     #[test]
-    fn test_config_save(){
-        todo!()
+    fn test_config_write_in() {
+        if let Ok(mut tempfile) = TempFile::new("test_temp") {
+            let config = UciConfig {
+                name: "test_config".to_owned(),
+                pkg_name: "test_config".to_owned(),
+                sections: vec![UciSection {
+                    name: format!("named"),
+                    sec_type: format!("foo"),
+                    options: vec![
+                        UciOption::new(
+                            format!("pos1"),
+                            UciOptionType::TypeOption,
+                            vec![format!("3")],
+                        ),
+                        UciOption::new(
+                            format!("pos2"),
+                            UciOptionType::TypeOption,
+                            vec![format!("3")],
+                        ),
+                        UciOption::new(
+                            format!("pos3"),
+                            UciOptionType::TypeList,
+                            vec![format!("3"), format!("5")],
+                        ),
+                    ],
+                }],
+                modified: false,
+            };
+            match config.write_in(&mut tempfile) {
+                Ok(()) => match tempfile.persist(Path::new("test_temp/test_config")) {
+                    Ok(()) => {
+                        assert!(true)
+                    }
+                    Err(err) => {
+                        panic!("{:?}", err)
+                    }
+                },
+                Err(err) => panic!("{:?}", err),
+            };
+        };
     }
-
 }

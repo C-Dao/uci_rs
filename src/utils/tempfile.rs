@@ -30,6 +30,7 @@ fn create_named(mut path: PathBuf, open_options: &mut OpenOptions) -> io::Result
 
 fn persist(old_path: &Path, new_path: &Path, overwrite: bool) -> io::Result<()> {
     if overwrite {
+        println!("{:?} {:?}", old_path, new_path);
         fs::rename(old_path, new_path)?;
     } else {
         fs::hard_link(old_path, new_path)?;

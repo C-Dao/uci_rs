@@ -175,6 +175,38 @@ mod test {
     }
     #[test]
     fn test_section_del() {
-        todo!()
+        let test_cases = vec![
+            (
+                UciSection {
+                    name: format!("@foo[-1]"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("pos"),
+                        UciOptionType::TypeOption,
+                        vec![format!("2")],
+                    )],
+                },
+                "pos",
+                None,
+            ),
+            (
+                UciSection {
+                    name: format!("@foo[-1]"),
+                    sec_type: format!("foo"),
+                    options: vec![UciOption::new(
+                        format!("list"),
+                        UciOptionType::TypeList,
+                        vec![format!("20")],
+                    )],
+                },
+                "list",
+                None,
+            ),
+        ];
+
+        for (mut sec, del_name, expected) in test_cases {
+            sec.del(del_name);
+            assert_eq!(sec.get(del_name), expected);
+        }
     }
 }
