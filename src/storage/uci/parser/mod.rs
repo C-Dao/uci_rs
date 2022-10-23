@@ -268,7 +268,6 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                             cfg.add(s.clone());
                         }
                     });
-                    sec = None;
                 };
                 if tok.items.len() == 2 {
                     let sec_typ = tok.items[0].val.to_string();
@@ -313,7 +312,6 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                         cfg.add(s.clone());
                     }
                 });
-                sec = None;
             };
             Ok(cfg)
         }

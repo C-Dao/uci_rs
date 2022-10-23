@@ -13,10 +13,12 @@ pub fn init_default_tree() -> UciTree {
 
 #[cfg(test)]
 mod test {
+    use crate::storage::uci::tree::Uci;
+
     use super::*;
     #[test]
     fn test_init_default_tree() {
         let tree = init_default_tree();
-        assert_eq!(tree.dir.to_str().unwrap(), DEFAULT_TREE_PATH);
+        assert_eq!(tree.get_dir().to_str().unwrap(), DEFAULT_TREE_PATH);
     }
 }

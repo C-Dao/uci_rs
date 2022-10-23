@@ -16,8 +16,8 @@ pub struct UciConfig {
 impl UciConfig {
     pub fn new(name: &str) -> UciConfig {
         UciConfig {
-            name: name.to_string(),
-            pkg_name: name.to_string(),
+            name: name.to_owned(),
+            pkg_name: "".to_owned(),
             sections: Vec::new(),
             modified: false,
         }
@@ -166,7 +166,7 @@ impl UciConfig {
             .find(|sec| self.get_section_name(&section) == self.get_section_name(sec))
             .is_some()
         {
-            let same_name_sec_mut = self.get_mut(&section.name).unwrap().unwrap();
+            let same_name_sec_mut = self.get_mut(self.get_section_name(&section).as_str()).unwrap().unwrap();
             for opt in section.options.into_iter() {
                 same_name_sec_mut.merge(opt)
             }
