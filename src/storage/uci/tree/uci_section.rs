@@ -10,8 +10,8 @@ pub struct UciSection {
 impl UciSection {
     pub fn new(sec_type: String, name: String) -> UciSection {
         UciSection {
-            name: name,
-            sec_type: sec_type,
+            name,
+            sec_type,
             options: Vec::new(),
         }
     }
@@ -72,24 +72,24 @@ mod test {
         let test_cases = vec![
             (
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     )],
                 },
                 UciOption::new(
-                    format!("pos"),
+                    "pos".to_string(),
                     UciOptionType::TypeOption,
                     vec![format!("14")],
                 ),
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("14")],
                     )],
@@ -97,24 +97,24 @@ mod test {
             ),
             (
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     )],
                 },
                 UciOption::new(
-                    format!("pos"),
+                    "pos".to_string(),
                     UciOptionType::TypeList,
                     vec![format!("14"), format!("3")],
                 ),
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("14"), format!("3")],
                     )],
@@ -122,24 +122,24 @@ mod test {
             ),
             (
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5")],
                     )],
                 },
                 UciOption::new(
-                    format!("pos"),
+                    "pos".to_string(),
                     UciOptionType::TypeOption,
                     vec![format!("14")],
                 ),
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("14")],
                     )],
@@ -147,20 +147,20 @@ mod test {
             ),
             (
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5")],
                     )],
                 },
-                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("14")]),
+                UciOption::new("pos".to_string(), UciOptionType::TypeList, vec![format!("14")]),
                 UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5"), format!("14")],
                     )],
@@ -178,10 +178,10 @@ mod test {
         let test_cases = vec![
             (
                 UciSection {
-                    name: format!("@foo[-1]"),
-                    sec_type: format!("foo"),
+                    name: "@foo[-1]".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("2")],
                     )],
@@ -191,10 +191,10 @@ mod test {
             ),
             (
                 UciSection {
-                    name: format!("@foo[-1]"),
-                    sec_type: format!("foo"),
+                    name: "@foo[-1]".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("20")],
                     )],

@@ -58,7 +58,6 @@ impl UciConfig {
             .sections
             .iter()
             .filter(|sec| sec.sec_type == sec_type)
-            .map(|sec| sec)
             .nth(index as usize);
 
         Ok(section)
@@ -81,7 +80,6 @@ impl UciConfig {
             .sections
             .iter_mut()
             .filter(|sec| sec.sec_type == sec_type)
-            .map(|sec| sec)
             .nth(index as usize);
 
         Ok(section)
@@ -91,8 +89,7 @@ impl UciConfig {
         self.sections
             .iter()
             .filter(|sec| sec.sec_type == sec_type)
-            .collect::<Vec<&UciSection>>()
-            .len()
+            .count()
     }
 
     pub(crate) fn set_pkg_name(&mut self, name: String) {
@@ -102,12 +99,12 @@ impl UciConfig {
     pub fn write_in(&self, file: &mut TempFile) -> Result<()> {
         let mut buf = BufWriter::new(file);
 
-        if self.pkg_name != "" {
+        if !self.pkg_name.is_empty() {
             buf.write_fmt(format_args!("\npackage '{}'\n", self.pkg_name))?;
         }
 
         for sec in self.sections.iter() {
-            if sec.name == "" {
+            if sec.name.is_empty() {
                 buf.write_fmt(format_args!("\nconfig {}\n", sec.sec_type))?;
             } else {
                 buf.write_fmt(format_args!("\nconfig {} '{}'\n", sec.sec_type, sec.name))?;
@@ -132,14 +129,14 @@ impl UciConfig {
     }
 
     pub fn get_section_name(&self, section: &UciSection) -> String {
-        if section.name != "" {
+        if !section.name.is_empty() {
             return section.name.clone();
         }
         format!("@{}[{}]", section.sec_type, self._index(section).unwrap())
     }
 
     pub fn get(&self, name: &str) -> Result<Option<&UciSection>> {
-        if name.starts_with("@") {
+        if name.starts_with('@') {
             self._get_unnamed(name)
         } else {
             self._get_named(name)
@@ -147,7 +144,7 @@ impl UciConfig {
     }
 
     pub fn get_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>> {
-        if name.starts_with("@") {
+        if name.starts_with('@') {
             self._get_unnamed_mut(name)
         } else {
             self._get_named_mut(name)
@@ -163,8 +160,7 @@ impl UciConfig {
         if self
             .sections
             .iter()
-            .find(|sec| self.get_section_name(&section) == self.get_section_name(sec))
-            .is_some()
+            .any(|sec| self.get_section_name(&section) == self.get_section_name(&sec))
         {
             let same_name_sec_mut = self.get_mut(self.get_section_name(&section).as_str()).unwrap().unwrap();
             for opt in section.options.into_iter() {
@@ -241,7 +237,7 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
         Err(err) => {
             return Err(Error::new(format!(
                 "invalid syntax: index must be numeric: {}",
-                err.to_string()
+                err
             )))
         }
     };
@@ -261,53 +257,43 @@ mod test {
         let test_cases = vec![
             (
                 "",
-                Err(format!(
-                    "implausible section selector: must be at least 5 characters long"
-                )),
+                Err("implausible section selector: must be at least 5 characters long".to_string()),
             ),
             (
                 "aa[0]",
-                Err(format!(
-                    "invalid syntax: section selector must start with @ sign"
-                )),
+                Err("invalid syntax: section selector must start with @ sign".to_string()),
             ),
             (
                 "@@[0]",
-                Err(format!("invalid syntax: multiple @ signs found")),
+                Err("invalid syntax: multiple @ signs found".to_string()),
             ),
             (
                 "@@@@@@@@@@@",
-                Err(format!("invalid syntax: multiple @ signs found")),
+                Err("invalid syntax: multiple @ signs found".to_string()),
             ),
             (
                 "@[[0]",
-                Err(format!("invalid syntax: multiple open brackets found")),
+                Err("invalid syntax: multiple open brackets found".to_string()),
             ),
             (
                 "@][0]",
-                Err(format!("invalid syntax: multiple closed brackets found")),
+                Err("invalid syntax: multiple closed brackets found".to_string()),
             ),
             (
                 "@aa0]",
-                Err(format!(
-                    "invalid syntax: section selector must have format '@type[index]'"
-                )),
+                Err("invalid syntax: section selector must have format '@type[index]'".to_string()),
             ),
             (
                 "@a[b]",
-                Err(format!(
-                    "invalid syntax: index must be numeric: invalid digit found in string"
-                )),
+                Err("invalid syntax: index must be numeric: invalid digit found in string".to_string()),
             ),
-            ("@a[0]", Ok((format!("a"), 0))),
-            ("@a[4223]", Ok((format!("a"), 4223))),
-            ("@a[-1]", Ok((format!("a"), -1))),
-            ("@abcdEFGHijkl[-255]", Ok((format!("abcdEFGHijkl"), -255))),
+            ("@a[0]", Ok(("a".to_string(), 0))),
+            ("@a[4223]", Ok(("a".to_string(), 4223))),
+            ("@a[-1]", Ok(("a".to_string(), -1))),
+            ("@abcdEFGHijkl[-255]", Ok(("abcdEFGHijkl".to_string(), -255))),
             (
                 "@abcdEFGHijkl[0xff]",
-                Err(format!(
-                    "invalid syntax: index must be numeric: invalid digit found in string"
-                )),
+                Err("invalid syntax: index must be numeric: invalid digit found in string".to_string()),
             ),
         ];
 
@@ -325,153 +311,153 @@ mod test {
 
     #[test]
     fn test_config_get() {
-        let config = uci_parse("unnamed",format!("\npackage 'abc'\nconfig foo named\n\toption pos '0'\n\toption unnamed '0'\n\tlist list 0\n\nconfig foo\n\toption pos '1'\n\toption unnamed '1'\n\tlist list 10\n\nconfig foo\n\toption pos '2'\n\toption unnamed '1'\n\tlist list 20\n\nconfig foo named\n\toption pos '3'\n\toption unnamed '0'\n\tlist list 30\n"));
+        let config = uci_parse("unnamed","\npackage 'abc'\nconfig foo named\n\toption pos '0'\n\toption unnamed '0'\n\tlist list 0\n\nconfig foo\n\toption pos '1'\n\toption unnamed '1'\n\tlist list 10\n\nconfig foo\n\toption pos '2'\n\toption unnamed '1'\n\tlist list 20\n\nconfig foo named\n\toption pos '3'\n\toption unnamed '0'\n\tlist list 30\n".to_string());
 
         assert!(config.is_ok());
 
         let test_cases = vec![
             UciSection {
-                name: format!("named"),
-                sec_type: format!("foo"),
+                name: "named".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("0")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("0"), format!("30")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[0]"),
-                sec_type: format!("foo"),
+                name: "@foo[0]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("0")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("0"), format!("30")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[1]"),
-                sec_type: format!("foo"),
+                name: "@foo[1]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("10")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[2]"),
-                sec_type: format!("foo"),
+                name: "@foo[2]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("2")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("20")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[-3]"),
-                sec_type: format!("foo"),
+                name: "@foo[-3]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("0")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("0"), format!("30")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[-2]"),
-                sec_type: format!("foo"),
+                name: "@foo[-2]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("10")],
                     ),
                 ],
             },
             UciSection {
-                name: format!("@foo[-1]"),
-                sec_type: format!("foo"),
+                name: "@foo[-1]".to_string(),
+                sec_type: "foo".to_string(),
                 options: vec![
                     UciOption::new(
-                        format!("pos"),
+                        "pos".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("2")],
                     ),
                     UciOption::new(
-                        format!("unnamed"),
+                        "unnamed".to_string(),
                         UciOptionType::TypeOption,
                         vec![format!("1")],
                     ),
                     UciOption::new(
-                        format!("list"),
+                        "list".to_string(),
                         UciOptionType::TypeList,
                         vec![format!("20")],
                     ),
@@ -502,8 +488,8 @@ mod test {
                     name: "test_config".to_owned(),
                     pkg_name: "test_config".to_owned(),
                     sections: vec![UciSection {
-                        name: format!("named"),
-                        sec_type: format!("foo"),
+                        name: "named".to_string(),
+                        sec_type: "foo".to_string(),
                         options: vec![],
                     }],
                     modified: false,
@@ -517,7 +503,7 @@ mod test {
                     pkg_name: "test_config".to_owned(),
                     sections: vec![UciSection {
                         name: "".to_string(),
-                        sec_type: format!("foo"),
+                        sec_type: "foo".to_string(),
                         options: vec![],
                     }],
                     modified: false,
@@ -542,21 +528,21 @@ mod test {
                 name: "test_config".to_owned(),
                 pkg_name: "test_config".to_owned(),
                 sections: vec![UciSection {
-                    name: format!("named"),
-                    sec_type: format!("foo"),
+                    name: "named".to_string(),
+                    sec_type: "foo".to_string(),
                     options: vec![
                         UciOption::new(
-                            format!("pos1"),
+                            "pos1".to_string(),
                             UciOptionType::TypeOption,
                             vec![format!("3")],
                         ),
                         UciOption::new(
-                            format!("pos2"),
+                            "pos2".to_string(),
                             UciOptionType::TypeOption,
                             vec![format!("3")],
                         ),
                         UciOption::new(
-                            format!("pos3"),
+                            "pos3".to_string(),
                             UciOptionType::TypeList,
                             vec![format!("3"), format!("5")],
                         ),
@@ -567,7 +553,6 @@ mod test {
             match config.write_in(&mut tempfile) {
                 Ok(()) => match tempfile.persist(Path::new("test_temp/test_config")) {
                     Ok(()) => {
-                        assert!(true)
                     }
                     Err(err) => {
                         panic!("{:?}", err)

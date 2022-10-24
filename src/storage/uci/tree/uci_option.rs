@@ -16,9 +16,9 @@ pub enum UciOptionType {
 impl UciOption {
     pub fn new(name: String, opt_type: UciOptionType, values: Vec<String>) -> UciOption {
         UciOption {
-            name: name,
-            opt_type: opt_type,
-            values: values,
+            name,
+            opt_type,
+            values,
         }
     }
 
@@ -60,7 +60,7 @@ mod test {
         let test_cases = vec![
             (
                 UciOption::new(
-                    format!("pos"),
+                    "pos".to_string(),
                     UciOptionType::TypeOption,
                     vec![format!("3")],
                 ),
@@ -68,17 +68,17 @@ mod test {
                 vec![format!("5")],
             ),
             (
-                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("3")]),
+                UciOption::new("pos".to_string(), UciOptionType::TypeList, vec![format!("3")]),
                 vec![format!("5")],
                 vec![format!("3"), format!("5")],
             ),
             (
-                UciOption::new(format!("pos"), UciOptionType::TypeList, vec![format!("3")]),
+                UciOption::new("pos".to_string(), UciOptionType::TypeList, vec![format!("3")]),
                 vec![],
                 vec![format!("3")],
             ),
             (
-                UciOption::new(format!("pos"), UciOptionType::TypeOption, vec![format!("3")]),
+                UciOption::new("pos".to_string(), UciOptionType::TypeOption, vec![format!("3")]),
                 vec![],
                 vec![],
             ),

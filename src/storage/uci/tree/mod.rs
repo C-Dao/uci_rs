@@ -42,7 +42,7 @@ impl UciTree {
 
         file.read_to_string(&mut string_buffer)?;
 
-        let cfg = uci_parse(&name, string_buffer)?;
+        let cfg = uci_parse(name, string_buffer)?;
 
         self.configs.insert(name.to_string(), cfg);
 
@@ -134,8 +134,14 @@ impl UciTree {
         match self._ensure_config_loaded_mut(config_name) {
             Ok(cfg) => match cfg.get_mut(section_name) {
                 Ok(Some(sec)) => match sec.get_mut(option_name) {
-                    Some(opt) => Ok(opt.set_values(values)),
-                    None => Ok(sec.add(UciOption::new(option_name.to_string(), opt_type, values))),
+                    Some(opt) => {
+                        opt.set_values(values);
+                        Ok(())
+                    }
+                    None => {
+                        sec.add(UciOption::new(option_name.to_string(), opt_type, values));
+                        Ok(())
+                    }
                 },
                 Ok(None) => Err(Error::new(format!("section '{}' not found", section_name))),
                 Err(err) => Err(err),
@@ -214,7 +220,7 @@ impl Uci for UciTree {
         if let Err(error) = self
             .configs
             .iter()
-            .filter(|(_, config)| config.modified == true)
+            .filter(|(_, config)| config.modified)
             .try_for_each(|(_, config)| -> Result<()> { self._save_config(config) })
         {
             return Err(error);
@@ -353,18 +359,16 @@ impl Uci for UciTree {
         section_type: &str,
         section_name: &str,
     ) -> Result<()> {
-        let cfg_res = self._ensure_config_loaded_mut(config_name);
-
-        let cfg = if cfg_res.is_err() {
-            let mut cfg = UciConfig::new(&config_name);
-            cfg.modified = true;
-            self.configs.insert(config_name.to_string(), cfg);
-            self.configs.get_mut(config_name).unwrap()
+        let cfg = if let Ok(exsit_cfg) = self._ensure_config_loaded_mut(config_name) {
+            exsit_cfg
         } else {
-            cfg_res.unwrap()
+            let mut new_cfg = UciConfig::new(config_name);
+            new_cfg.modified = true;
+            self.configs.insert(config_name.to_string(), new_cfg);
+            self.configs.get_mut(config_name).unwrap()
         };
 
-        if section_name == "" {
+        if section_name.is_empty() {
             cfg.add(UciSection::new(
                 section_type.to_string(),
                 section_name.to_string(),
@@ -412,7 +416,7 @@ impl Uci for UciTree {
                 cfg.set_pkg_name(package_name.to_string());
                 Ok(())
             }
-            None => Err(Error::new(format!("config not found"))),
+            None => Err(Error::new("config not found".to_string())),
         }
     }
 
@@ -493,7 +497,7 @@ mod test {
         tree.revert(vec!["uci_config".to_owned()])?;
         tree.load_config("uci_config")?;
         if let Some(config) = tree.get_config("uci_config") {
-            assert_eq!(config.modified, false);
+            assert!(!config.modified);
             Ok(())
         } else {
             panic!("revert test_data/uci_config failed");
@@ -529,7 +533,7 @@ mod test {
         let mut tree = UciTree::new("test_data");
         tree.load_config("uci_config")?;
         if let Ok(values) = tree.get_option_last_value("uci_config", "ntp", "server") {
-            if (values.is_some()) {
+            if values.is_some() {
                 assert_eq!(values.unwrap(), "3.lede.pool.ntp.org");
             }
             Ok(())
@@ -543,7 +547,7 @@ mod test {
         let mut tree = UciTree::new("test_data");
         tree.load_config("uci_config")?;
         if let Ok(values) = tree.get_option_bool_value("uci_config", "ccache", "enable") {
-            assert_eq!(values, true);
+            assert!(values);
             Ok(())
         } else {
             panic!("get option bool value of 'uci_config.ccache.enable' failed");
@@ -554,7 +558,10 @@ mod test {
     fn test_uci_set_option_values() -> Result<()> {
         let mut tree = UciTree::new("test_data");
         tree.load_config("uci_config")?;
-        if let Ok(_) = tree.set_option_values("uci_config", "main", "lang", vec![format!("en")]) {
+        if tree
+            .set_option_values("uci_config", "main", "lang", vec![format!("en")])
+            .is_ok()
+        {
             if let Ok(values) = tree.get_option_value("uci_config", "main", "lang") {
                 assert_eq!(values[0], format!("en"));
             };
@@ -569,7 +576,7 @@ mod test {
         let mut tree = UciTree::new("test_data");
         tree.load_config("uci_config")?;
         tree.del_option("uci_config", "main", "lang")?;
-        if let Ok(_) = tree.get_option_value("uci_config", "main", "lang") {
+        if tree.get_option_value("uci_config", "main", "lang").is_ok() {
             panic!("delete option of 'uci_config.main.lang' failed");
         } else {
             Ok(())
@@ -582,7 +589,10 @@ mod test {
         tree.load_config("uci_config")?;
         tree.add_section("uci_config", "core", "setting")?;
         tree.set_option_values("uci_config", "setting", "off", vec![])?;
-        if let Ok(_) = tree.get_option_value("uci_config", "setting", "off") {
+        if tree
+            .get_option_value("uci_config", "setting", "off")
+            .is_ok()
+        {
             Ok(())
         } else {
             panic!("add section of 'uci_config.setting' failed");
@@ -594,7 +604,7 @@ mod test {
         let mut tree = UciTree::new("test_data");
         tree.load_config("uci_config")?;
         tree.del_section("uci_config", "main")?;
-        if let Ok(_) = tree.get_option_value("uci_config", "main", "lang") {
+        if tree.get_option_value("uci_config", "main", "lang").is_ok() {
             panic!("delete section of 'uci_config.main' failed");
         } else {
             Ok(())

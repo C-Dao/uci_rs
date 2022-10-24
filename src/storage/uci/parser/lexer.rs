@@ -31,32 +31,32 @@ trait LexerStateMachine {
 
 #[derive(Debug)]
 enum LexerState {
-    LexKeyWord,
-    LexComment,
-    LexPackage,
-    LexPackageName,
-    LexConfig,
-    LexConfigType,
-    LexOptionalName,
-    LexOption,
-    LexList,
-    LexOptionName,
-    LexValue,
-    LexQuoted,
-    LexUnquoted,
+    KeyWord,
+    Comment,
+    Package,
+    PackageName,
+    Config,
+    ConfigType,
+    OptionalName,
+    Option,
+    List,
+    OptionName,
+    Value,
+    Quoted,
+    Unquoted,
 }
 
 impl Lexer {
     pub fn new(name: &str, input: String) -> Self {
-        return Lexer {
+        Lexer {
             name: name.to_string(),
-            input: input,
-            state: Some(LexerState::LexKeyWord),
+            input,
+            state: Some(LexerState::KeyWord),
             items: Some(VecDeque::new()),
             start: 0,
             pos: 0,
             width: 0,
-        };
+        }
     }
 
     fn next_rune(&mut self) -> Option<char> {
@@ -105,7 +105,7 @@ impl Lexer {
     fn emit(&mut self, typ: TokenItemType) {
         if self.pos > self.start {
             self.items.as_mut().unwrap().push_back(TokenItem {
-                typ: typ,
+                typ,
                 val: self.input.get(self.start..self.pos).unwrap().to_string(),
                 pos: self.pos,
             });
@@ -115,55 +115,44 @@ impl Lexer {
 
     fn emit_error(&mut self, error: &str) -> Option<LexerState> {
         self.items.as_mut().unwrap().push_back(TokenItem {
-            typ: TokenItemType::TokenError,
+            typ: TokenItemType::Error,
             val: format!("config: {}, {}", self.name, error),
             pos: self.pos,
         });
-        return None;
+        None
     }
 
     fn accept_comment(&mut self) {
         if self.next_rune().unwrap() == '#' {
-            loop {
-                if let Some(r) = self.next_rune() {
+           while let Some(r) = self.next_rune() {
                     if r == '\n' {
                         break;
                     }
-                } else {
-                    break;
-                }
+                } 
             }
-        };
         self.backup();
     }
 
     fn consume_nowrap_whitespace(&mut self) {
-        loop {
-            if let Some(rune) = self.peek() {
+        while let Some(rune) = self.peek() {
                 if rune == ' ' || rune == '\t' {
                     self.next_rune();
                 } else {
                     break;
                 }
-            } else {
-                break;
-            }
+         
         }
 
         self.ignore();
     }
 
     fn consume_whitespace(&mut self) {
-        loop {
-            if let Some(rune) = self.peek() {
+        while let Some(rune) = self.peek() {
                 if rune.is_whitespace() {
                     self.next_rune();
                 } else {
                     break;
                 }
-            } else {
-                break;
-            }
         }
 
         self.ignore();
@@ -175,9 +164,9 @@ impl Lexer {
                 Some(r)
                     if !(r == '-'
                         || r == '_'
-                        || 'a' <= r && r <= 'z'
-                        || 'A' <= r && r <= 'Z'
-                        || '0' <= r && r <= '9') =>
+                        || ('a'..='z').contains(&r)
+                        || ('A'..='Z').contains(&r)
+                        || ('0'..='9').contains(&r)) =>
                 {
                     self.backup();
                     break;
@@ -213,26 +202,26 @@ impl Lexer {
     pub fn stop(&mut self) -> TokenItem {
         let mut it = self.eof();
         if self.items.is_none() {
-            return it;
+            it
         } else {
             if let Some(last_it) = self.items.as_mut().unwrap().pop_front() {
                 it = last_it;
             }
             self.items = None;
-            return it;
+            it
         }
     }
 
     fn eof(&self) -> TokenItem {
         return TokenItem {
-            typ: TokenItemType::TokenEOF,
+            typ: TokenItemType::EOF,
             val: self.input.get(self.start..self.pos).unwrap().to_string(),
             pos: self.pos,
         };
     }
 
     fn emit_string(&mut self, t: TokenItemType) {
-        if self.pos - 1 >= self.start + 1 {
+        if self.pos > self.start + 1 {
             self.items.as_mut().unwrap().push_back(TokenItem {
                 typ: t,
                 val: self
@@ -250,33 +239,33 @@ impl Lexer {
 impl LexerStateMachine for Lexer {
     fn action(&mut self) -> Option<LexerState> {
         match self.state {
-            Some(LexerState::LexComment) => self.lex_comment(),
-            Some(LexerState::LexConfig) => self.lex_config(),
-            Some(LexerState::LexConfigType) => self.lex_config_type(),
-            Some(LexerState::LexKeyWord) => self.lex_key_word(),
-            Some(LexerState::LexList) => self.lex_list(),
-            Some(LexerState::LexOption) => self.lex_option(),
-            Some(LexerState::LexOptionName) => self.lex_option_name(),
-            Some(LexerState::LexOptionalName) => self.lex_optional_name(),
-            Some(LexerState::LexPackage) => self.lex_package(),
-            Some(LexerState::LexPackageName) => self.lex_package_name(),
-            Some(LexerState::LexQuoted) => self.lex_quoted(),
-            Some(LexerState::LexUnquoted) => self.lex_unquoted(),
-            Some(LexerState::LexValue) => self.lex_value(),
+            Some(LexerState::Comment) => self.lex_comment(),
+            Some(LexerState::Config) => self.lex_config(),
+            Some(LexerState::ConfigType) => self.lex_config_type(),
+            Some(LexerState::KeyWord) => self.lex_key_word(),
+            Some(LexerState::List) => self.lex_list(),
+            Some(LexerState::Option) => self.lex_option(),
+            Some(LexerState::OptionName) => self.lex_option_name(),
+            Some(LexerState::OptionalName) => self.lex_optional_name(),
+            Some(LexerState::Package) => self.lex_package(),
+            Some(LexerState::PackageName) => self.lex_package_name(),
+            Some(LexerState::Quoted) => self.lex_quoted(),
+            Some(LexerState::Unquoted) => self.lex_unquoted(),
+            Some(LexerState::Value) => self.lex_value(),
             None => None,
         }
     }
     fn lex_key_word(&mut self) -> Option<LexerState> {
         self.consume_whitespace();
         match self.rest() {
-            Some(curr) if curr.starts_with("#") => Some(LexerState::LexComment),
-            Some(curr) if curr.starts_with(KeyWord::KW_PACKAGE) => Some(LexerState::LexPackage),
-            Some(curr) if curr.starts_with(KeyWord::KW_CONFIG) => Some(LexerState::LexConfig),
-            Some(curr) if curr.starts_with(KeyWord::KW_OPTION) => Some(LexerState::LexOption),
-            Some(curr) if curr.starts_with(KeyWord::KW_LIST) => Some(LexerState::LexList),
+            Some(curr) if curr.starts_with('#') => Some(LexerState::Comment),
+            Some(curr) if curr.starts_with(KeyWord::KW_PACKAGE) => Some(LexerState::Package),
+            Some(curr) if curr.starts_with(KeyWord::KW_CONFIG) => Some(LexerState::Config),
+            Some(curr) if curr.starts_with(KeyWord::KW_OPTION) => Some(LexerState::Option),
+            Some(curr) if curr.starts_with(KeyWord::KW_LIST) => Some(LexerState::List),
             _ => {
                 if self.next_rune().is_none() {
-                    self.emit(TokenItemType::TokenEOF);
+                    self.emit(TokenItemType::EOF);
                 } else {
                     self.emit_error("expected keyword (package, config, option, list) or eof");
                 }
@@ -288,13 +277,13 @@ impl LexerStateMachine for Lexer {
     fn lex_comment(&mut self) -> Option<LexerState> {
         self.accept_comment();
         self.ignore();
-        Some(LexerState::LexKeyWord)
+        Some(LexerState::KeyWord)
     }
 
     fn lex_package(&mut self) -> Option<LexerState> {
         self.pos += KeyWord::KW_PACKAGE.len();
-        self.emit(TokenItemType::TokenPackage);
-        Some(LexerState::LexPackageName)
+        self.emit(TokenItemType::Package);
+        Some(LexerState::PackageName)
     }
 
     fn lex_package_name(&mut self) -> Option<LexerState> {
@@ -306,7 +295,7 @@ impl LexerStateMachine for Lexer {
                 }
                 Some(r) if r == '\'' || r == '"' => {
                     self.backup();
-                    return Some(LexerState::LexQuoted);
+                    return Some(LexerState::Quoted);
                 }
                 _ => {}
             }
@@ -314,16 +303,16 @@ impl LexerStateMachine for Lexer {
     }
     fn lex_config(&mut self) -> Option<LexerState> {
         self.pos += KeyWord::KW_CONFIG.len();
-        self.emit(TokenItemType::TokenConfig);
+        self.emit(TokenItemType::Config);
         self.consume_nowrap_whitespace();
-        Some(LexerState::LexConfigType)
+        Some(LexerState::ConfigType)
     }
 
     fn lex_config_type(&mut self) -> Option<LexerState> {
         self.accept_ident();
-        self.emit(TokenItemType::TokenIdent);
+        self.emit(TokenItemType::Ident);
         self.consume_nowrap_whitespace();
-        Some(LexerState::LexOptionalName)
+        Some(LexerState::OptionalName)
     }
 
     fn lex_optional_name(&mut self) -> Option<LexerState> {
@@ -331,44 +320,44 @@ impl LexerStateMachine for Lexer {
             Some(r) if r == '\n' => self.ignore(),
             Some(r) if r == '"' || r == '\'' => {
                 self.backup();
-                return Some(LexerState::LexQuoted);
+                return Some(LexerState::Quoted);
             }
             _ => {
                 self.accept_ident();
-                self.emit(TokenItemType::TokenString)
+                self.emit(TokenItemType::String)
             }
         };
-        Some(LexerState::LexKeyWord)
+        Some(LexerState::KeyWord)
     }
 
     fn lex_option(&mut self) -> Option<LexerState> {
         self.pos += KeyWord::KW_OPTION.len();
-        self.emit(TokenItemType::TokenOption);
+        self.emit(TokenItemType::Option);
         self.consume_nowrap_whitespace();
-        Some(LexerState::LexOptionName)
+        Some(LexerState::OptionName)
     }
 
     fn lex_list(&mut self) -> Option<LexerState> {
         self.pos += KeyWord::KW_LIST.len();
-        self.emit(TokenItemType::TokenList);
+        self.emit(TokenItemType::List);
         self.consume_nowrap_whitespace();
-        Some(LexerState::LexOptionName)
+        Some(LexerState::OptionName)
     }
 
     fn lex_option_name(&mut self) -> Option<LexerState> {
         self.accept_ident();
-        self.emit(TokenItemType::TokenIdent);
+        self.emit(TokenItemType::Ident);
         self.consume_nowrap_whitespace();
-        Some(LexerState::LexValue)
+        Some(LexerState::Value)
     }
 
     fn lex_value(&mut self) -> Option<LexerState> {
         if let Some(r) = self.peek() {
             if r == '"' || r == '\'' {
-                return Some(LexerState::LexQuoted);
+                return Some(LexerState::Quoted);
             }
         };
-        Some(LexerState::LexUnquoted)
+        Some(LexerState::Unquoted)
     }
 
     fn lex_quoted(&mut self) -> Option<LexerState> {
@@ -379,7 +368,7 @@ impl LexerStateMachine for Lexer {
             loop {
                 match self.next_rune() {
                     Some(r) if r == '\\' => {
-                        if let Some(_) = self.next_rune() {
+                        if self.next_rune().is_some() {
                         } else {
                             return self.emit_error("unterminated quoted string");
                         };
@@ -396,9 +385,9 @@ impl LexerStateMachine for Lexer {
                     Some(_) => {}
                 };
             }
-            self.emit_string(TokenItemType::TokenString);
+            self.emit_string(TokenItemType::String);
             self.consume_nowrap_whitespace();
-            return Some(LexerState::LexKeyWord);
+            return Some(LexerState::KeyWord);
         };
         None
     }
@@ -421,11 +410,11 @@ impl LexerStateMachine for Lexer {
             };
         }
         self.backup();
-        self.emit(TokenItemType::TokenString);
+        self.emit(TokenItemType::String);
         self.consume_nowrap_whitespace();
         self.accept_once("\n");
         self.ignore();
-        Some(LexerState::LexKeyWord)
+        Some(LexerState::KeyWord)
     }
 }
 
@@ -438,628 +427,628 @@ mod test {
         let test_cases = vec![
             (
                 "empty1", 
-                format!(""), 
+                String::new(), 
                 vec![]
             ),
             (
                 "empty2", 
-                format!("  \n\t\n\n \n "), 
+                "  \n\t\n\n \n ".to_string(), 
                 vec![]
             ),
             (
                 "simple",
-                format!("config sectiontype 'sectionname' \n\t option optionname 'optionvalue'\n"),
+                "config sectiontype 'sectionname' \n\t option optionname 'optionvalue'\n".to_string(),
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenConfig,
-                        val: format!("config"),
+                        typ: TokenItemType::Config,
+                        val: "config".to_string(),
                         pos: 0,
                      },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent,
-                        val: format!("sectiontype"),
+                        typ: TokenItemType::Ident,
+                        val: "sectiontype".to_string(),
                         pos: 0,
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString,
-                        val: format!("sectionname"),
+                        typ: TokenItemType::String,
+                        val: "sectionname".to_string(),
                         pos: 0,
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption,
-                        val: format!("option"),
+                        typ: TokenItemType::Option,
+                        val: "option".to_string(),
                         pos: 0,
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent,
-                        val: format!("optionname"),
+                        typ: TokenItemType::Ident,
+                        val: "optionname".to_string(),
                         pos: 0,
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString,
-                        val: format!("optionvalue"),
+                        typ: TokenItemType::String,
+                        val: "optionvalue".to_string(),
                         pos: 0,
                     },
                 ],
             ),
             (
                 "export", 
-                format!("package \"pkgname\"\n config empty \n config squoted 'sqname'\n config dquoted \"dqname\"\n config multiline 'line1\\\n\tline2'\n"),
+                "package \"pkgname\"\n config empty \n config squoted 'sqname'\n config dquoted \"dqname\"\n config multiline 'line1\\\n\tline2'\n".to_string(),
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenPackage, 
-                        val: format!("package"), 
+                        typ: TokenItemType::Package, 
+                        val: "package".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("pkgname"), 
+                        typ: TokenItemType::String, 
+                        val: "pkgname".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("empty"), 
+                        typ: TokenItemType::Ident, 
+                        val: "empty".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("squoted"), 
+                        typ: TokenItemType::Ident, 
+                        val: "squoted".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("sqname"), 
+                        typ: TokenItemType::String, 
+                        val: "sqname".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("dquoted"), 
+                        typ: TokenItemType::Ident, 
+                        val: "dquoted".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("dqname"), 
+                        typ: TokenItemType::String, 
+                        val: "dqname".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("multiline"), 
+                        typ: TokenItemType::Ident, 
+                        val: "multiline".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("line1\\\n\tline2"), 
+                        typ: TokenItemType::String, 
+                        val: "line1\\\n\tline2".to_string(), 
                         pos: 0
                     },
                 ]
             ),
             (
                 "unquoted", 
-                format!("config foo bar\noption answer 42\n"),
+                "config foo bar\noption answer 42\n".to_string(),
             	vec![
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("bar"), 
+                        typ: TokenItemType::String, 
+                        val: "bar".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("answer"), 
+                        typ: TokenItemType::Ident, 
+                        val: "answer".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("42"), 
+                        typ: TokenItemType::String, 
+                        val: "42".to_string(), 
                         pos: 0
                     },
                 ]
             ),
             (
                 "unnamed", 
-                format!("\nconfig foo named\n\toption pos '0'\n\toption unnamed '0'\n\tlist list 0\n\nconfig foo\n\toption pos '1'\n\toption unnamed '1'\n\tlist list 10\n\nconfig foo\n\toption pos '2'\n\toption unnamed '1'\n\tlist list 20\n\nconfig foo named\n\toption pos '3'\n\toption unnamed '0'\n\tlist list 30\n"), 
+                "\nconfig foo named\n\toption pos '0'\n\toption unnamed '0'\n\tlist list 0\n\nconfig foo\n\toption pos '1'\n\toption unnamed '1'\n\tlist list 10\n\nconfig foo\n\toption pos '2'\n\toption unnamed '1'\n\tlist list 20\n\nconfig foo named\n\toption pos '3'\n\toption unnamed '0'\n\tlist list 30\n".to_string(), 
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("named"), 
+                        typ: TokenItemType::String, 
+                        val: "named".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("pos"), 
+                        typ: TokenItemType::Ident, 
+                        val: "pos".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("0"), 
+                        typ: TokenItemType::String, 
+                        val: "0".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("unnamed"), 
+                        typ: TokenItemType::Ident, 
+                        val: "unnamed".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("0"), 
+                        typ: TokenItemType::String, 
+                        val: "0".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenList, 
-                        val: format!("list"), 
+                        typ: TokenItemType::List, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("list"), 
+                        typ: TokenItemType::Ident, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("0"), 
-                        pos: 0
-                    },
-
-                    TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("pos"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("1"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("unnamed"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("1"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenList, 
-                        val: format!("list"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("list"), 
-                        pos: 0
-                    },
-                    TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("10"), 
+                        typ: TokenItemType::String, 
+                        val: "0".to_string(), 
                         pos: 0
                     },
 
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("pos"), 
+                        typ: TokenItemType::Ident, 
+                        val: "pos".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("2"), 
+                        typ: TokenItemType::String, 
+                        val: "1".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("unnamed"), 
+                        typ: TokenItemType::Ident, 
+                        val: "unnamed".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("1"), 
+                        typ: TokenItemType::String, 
+                        val: "1".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenList, 
-                        val: format!("list"), 
+                        typ: TokenItemType::List, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("list"), 
+                        typ: TokenItemType::Ident, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("20"), 
+                        typ: TokenItemType::String, 
+                        val: "10".to_string(), 
                         pos: 0
                     },
 
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("named"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Ident, 
+                        val: "pos".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("pos"), 
+                        typ: TokenItemType::String, 
+                        val: "2".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("3"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Ident, 
+                        val: "unnamed".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("unnamed"), 
+                        typ: TokenItemType::String, 
+                        val: "1".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("0"), 
+                        typ: TokenItemType::List, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenList, 
-                        val: format!("list"), 
+                        typ: TokenItemType::Ident, 
+                        val: "list".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("list"), 
+                        typ: TokenItemType::String, 
+                        val: "20".to_string(), 
+                        pos: 0
+                    },
+
+                    TokenItem {
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("30"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::String, 
+                        val: "named".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::Ident, 
+                        val: "pos".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::String, 
+                        val: "3".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::Ident, 
+                        val: "unnamed".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::String, 
+                        val: "0".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::List, 
+                        val: "list".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::Ident, 
+                        val: "list".to_string(), 
+                        pos: 0
+                    },
+                    TokenItem {
+                        typ: TokenItemType::String, 
+                        val: "30".to_string(), 
                         pos: 0
                     },
                 ]
             ),
             (
                 "hyphenated", 
-                format!("\nconfig wifi-device wl0\n\toption type 'broadcom'\n\toption channel '6'\n\nconfig wifi-iface wifi0\n\toption device 'wl0'\n\toption mode 'ap'\n"),
+                "\nconfig wifi-device wl0\n\toption type 'broadcom'\n\toption channel '6'\n\nconfig wifi-iface wifi0\n\toption device 'wl0'\n\toption mode 'ap'\n".to_string(),
                 vec![
             	    TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("wifi-device"), 
+                        typ: TokenItemType::Ident, 
+                        val: "wifi-device".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("wl0"), 
+                        typ: TokenItemType::String, 
+                        val: "wl0".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("type"), 
+                        typ: TokenItemType::Ident, 
+                        val: "type".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("broadcom"), 
+                        typ: TokenItemType::String, 
+                        val: "broadcom".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("channel"), 
+                        typ: TokenItemType::Ident, 
+                        val: "channel".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("6"), 
+                        typ: TokenItemType::String, 
+                        val: "6".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("wifi-iface"), 
+                        typ: TokenItemType::Ident, 
+                        val: "wifi-iface".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("wifi0"), 
+                        typ: TokenItemType::String, 
+                        val: "wifi0".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("device"), 
+                        typ: TokenItemType::Ident, 
+                        val: "device".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("wl0"), 
+                        typ: TokenItemType::String, 
+                        val: "wl0".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("mode"), 
+                        typ: TokenItemType::Ident, 
+                        val: "mode".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("ap"), 
+                        typ: TokenItemType::String, 
+                        val: "ap".to_string(), 
                         pos: 0
                     }
                 ]
             ),
             (
                 "commented", 
-                format!("\n# heading\n\n# another heading\nconfig foo\n\toption opt1 1\n\t# option opt1 2\n\toption opt2 3 # baa\n\toption opt3 hello\n\n# a comment block spanning\n# multiple lines, surrounded\n# by empty lines\n\n# eof\n"), 
+                "\n# heading\n\n# another heading\nconfig foo\n\toption opt1 1\n\t# option opt1 2\n\toption opt2 3 # baa\n\toption opt3 hello\n\n# a comment block spanning\n# multiple lines, surrounded\n# by empty lines\n\n# eof\n".to_string(), 
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("opt1"), 
+                        typ: TokenItemType::Ident, 
+                        val: "opt1".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("1"), 
+                        typ: TokenItemType::String, 
+                        val: "1".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("opt2"), 
+                        typ: TokenItemType::Ident, 
+                        val: "opt2".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("3"), 
+                        typ: TokenItemType::String, 
+                        val: "3".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("opt3"), 
+                        typ: TokenItemType::Ident, 
+                        val: "opt3".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenString, 
-                        val: format!("hello"), 
+                        typ: TokenItemType::String, 
+                        val: "hello".to_string(), 
                         pos: 0
                     }
                 ]
             ),
             (
                 "invalid", 
-                format!("\n<?xml version=\"1.0\">\n<error message=\"not a UCI file\" />\n"), 
+                "\n<?xml version=\"1.0\">\n<error message=\"not a UCI file\" />\n".to_string(), 
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenError, 
-                        val: format!("config: invalid, expected keyword (package, config, option, list) or eof"), 
+                        typ: TokenItemType::Error, 
+                        val: "config: invalid, expected keyword (package, config, option, list) or eof".to_string(), 
                         pos: 0
                     }
                 ],
             ),
             (
                 "pkg invalid", 
-                format!("\n package\n"), 
+                "\n package\n".to_string(), 
                 vec![
                     TokenItem {
-                        typ: TokenItemType::TokenPackage, 
-                        val: format!("package"), 
+                        typ: TokenItemType::Package, 
+                        val: "package".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenError, 
-                        val: format!("config: pkg invalid, incomplete package name"), 
+                        typ: TokenItemType::Error, 
+                        val: "config: pkg invalid, incomplete package name".to_string(), 
                         pos: 0
                     },
                 ],
             ),
             (
                 "unterminated quoted string", 
-                format!("\nconfig foo \"bar\n"), 
+                "\nconfig foo \"bar\n".to_string(), 
                 vec![
             		TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenError, 
-                        val: format!("config: unterminated quoted string, unterminated quoted string"), 
+                        typ: TokenItemType::Error, 
+                        val: "config: unterminated quoted string, unterminated quoted string".to_string(), 
                         pos: 0
                     },
             	]
             ),
             (
                 "unterminated unquoted string", 
-                format!("\nconfig foo\n\toption opt opt\\\n"),  
+                "\nconfig foo\n\toption opt opt\\\n".to_string(),  
                 vec![
             		TokenItem {
-                        typ: TokenItemType::TokenConfig, 
-                        val: format!("config"), 
+                        typ: TokenItemType::Config, 
+                        val: "config".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("foo"), 
+                        typ: TokenItemType::Ident, 
+                        val: "foo".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenOption, 
-                        val: format!("option"), 
+                        typ: TokenItemType::Option, 
+                        val: "option".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenIdent, 
-                        val: format!("opt"), 
+                        typ: TokenItemType::Ident, 
+                        val: "opt".to_string(), 
                         pos: 0
                     },
                     TokenItem {
-                        typ: TokenItemType::TokenError, 
-                        val: format!("config: unterminated unquoted string, unterminated unquoted string"), 
+                        typ: TokenItemType::Error, 
+                        val: "config: unterminated unquoted string, unterminated unquoted string".to_string(), 
                         pos: 0
                     },
             	]
@@ -1072,7 +1061,7 @@ mod test {
             let mut idx = 0;
             loop {
                 let item = lex.next_item();
-                if item.typ == TokenItemType::TokenEOF {
+                if item.typ == TokenItemType::EOF {
                     break;
                 };
                 assert_eq!(item.typ, expected[idx].typ);

@@ -129,7 +129,7 @@ impl<F: Read> Read for TempFile<F> {
         self.as_file_mut().read(buf).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -144,7 +144,7 @@ where
         self.as_file().read(buf).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -156,7 +156,7 @@ impl<F: Write> Write for TempFile<F> {
         self.as_file_mut().write(buf).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -166,7 +166,7 @@ impl<F: Write> Write for TempFile<F> {
         self.as_file_mut().flush().map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -181,7 +181,7 @@ where
         self.as_file().write(buf).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -191,7 +191,7 @@ where
         self.as_file().flush().map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -203,7 +203,7 @@ impl<F: Seek> Seek for TempFile<F> {
         self.as_file_mut().seek(pos).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
@@ -218,7 +218,7 @@ where
         self.as_file().seek(pos).map_err(|error| {
             PathError {
                 path: self.path.clone().into_path_buf(),
-                error: error,
+                error,
             }
             .into()
         })
