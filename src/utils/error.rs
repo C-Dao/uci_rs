@@ -38,8 +38,10 @@ impl error::Error for PathError {
 }
 
 impl Error {
-    pub fn new(message: String) -> Error {
-        Error { message }
+    pub fn new<T>(message: T ) -> Error 
+    where T:Into<String>
+    {
+        Error { message: message.into() }
     }
 }
 

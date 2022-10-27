@@ -51,7 +51,7 @@ impl UciConfig {
         };
 
         if index < 0 || index >= count as i32 {
-            return Err(Error::new("invalid name: index out of bounds".to_string()));
+            return Err(Error::new("invalid name: index out of bounds"));
         };
 
         let section = self
@@ -73,7 +73,7 @@ impl UciConfig {
         };
 
         if index < 0 || index >= count as i32 {
-            return Err(Error::new("invalid name: index out of bounds".to_string()));
+            return Err(Error::new("invalid name: index out of bounds"));
         };
 
         let section = self
@@ -189,13 +189,13 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
     let bytes_section_name = section_name.as_bytes();
     if len < 5 {
         return Err(Error::new(
-            "implausible section selector: must be at least 5 characters long".to_string(),
+            "implausible section selector: must be at least 5 characters long",
         ));
     };
 
     if bytes_section_name[0] as char != '@' {
         return Err(Error::new(
-            "invalid syntax: section selector must start with @ sign".to_string(),
+            "invalid syntax: section selector must start with @ sign",
         ));
     };
 
@@ -204,17 +204,17 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
     for (i, r) in bytes_section_name.iter().enumerate() {
         if i != 0 && *r as char == '@' {
             return Err(Error::new(
-                "invalid syntax: multiple @ signs found".to_string(),
+                "invalid syntax: multiple @ signs found",
             ));
         };
         if bra > 0 && *r as char == '[' {
             return Err(Error::new(
-                "invalid syntax: multiple open brackets found".to_string(),
+                "invalid syntax: multiple open brackets found",
             ));
         };
         if i != ket && *r as char == ']' {
             return Err(Error::new(
-                "invalid syntax: multiple closed brackets found".to_string(),
+                "invalid syntax: multiple closed brackets found",
             ));
         };
         if *r as char == '[' {
@@ -224,7 +224,7 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
 
     if bra == 0 || bra >= ket {
         return Err(Error::new(
-            "invalid syntax: section selector must have format '@type[index]'".to_string(),
+            "invalid syntax: section selector must have format '@type[index]'",
         ));
     };
 

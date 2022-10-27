@@ -416,7 +416,7 @@ impl Uci for UciTree {
                 cfg.set_pkg_name(package_name.to_string());
                 Ok(())
             }
-            None => Err(Error::new("config not found".to_string())),
+            None => Err(Error::new("config not found")),
         }
     }
 
