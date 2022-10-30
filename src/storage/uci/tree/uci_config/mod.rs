@@ -1,14 +1,11 @@
-use std::io::{BufWriter, Write};
 use std::str::from_utf8;
 
-use super::{uci_option::UciOptionType, uci_section::UciSection};
-use crate::utils::tempfile::TempFile;
+use super::uci_section::UciSection;
 use crate::utils::{Error, Result};
 
 #[derive(Clone, Debug)]
 pub struct UciConfig {
     pub name: String,
-    pub pkg_name: String,
     pub sections: Vec<UciSection>,
     pub modified: bool,
 }
@@ -17,7 +14,6 @@ impl UciConfig {
     pub fn new(name: &str) -> UciConfig {
         UciConfig {
             name: name.to_owned(),
-            pkg_name: "".to_owned(),
             sections: Vec::new(),
             modified: false,
         }
@@ -30,15 +26,14 @@ impl UciConfig {
             .position(|sec| sec == section)
     }
 
-    fn _get_named(&self, name: &str) -> Result<Option<&UciSection>> {
-        Ok(self.sections.iter().find(|section| section.name == name))
+    fn _get_named(&self, name: &str) -> Option<&UciSection> {
+        self.sections.iter().find(|section| section.name == name)
     }
 
-    fn _get_named_mut(&mut self, name: &str) -> Result<Option<&mut UciSection>> {
-        Ok(self
-            .sections
+    fn _get_named_mut(&mut self, name: &str) -> Option<&mut UciSection> {
+        self.sections
             .iter_mut()
-            .find(|section| section.name == name))
+            .find(|section| section.name == name)
     }
 
     fn _get_unnamed(&self, name: &str) -> Result<Option<&UciSection>> {
@@ -92,40 +87,8 @@ impl UciConfig {
             .count()
     }
 
-    pub(crate) fn set_pkg_name(&mut self, name: String) {
-        self.pkg_name = name;
-    }
-
-    pub fn write_in(&self, file: &mut TempFile) -> Result<()> {
-        let mut buf = BufWriter::new(file);
-
-        if !self.pkg_name.is_empty() {
-            buf.write_fmt(format_args!("\npackage '{}'\n", self.pkg_name))?;
-        }
-
-        for sec in self.sections.iter() {
-            if sec.name.is_empty() {
-                buf.write_fmt(format_args!("\nconfig {}\n", sec.sec_type))?;
-            } else {
-                buf.write_fmt(format_args!("\nconfig {} '{}'\n", sec.sec_type, sec.name))?;
-            }
-
-            for opt in sec.options.iter() {
-                match opt.opt_type {
-                    UciOptionType::TypeOption => {
-                        buf.write_fmt(format_args!("\toption {} '{}'\n", opt.name, opt.values[0]))?;
-                    }
-                    UciOptionType::TypeList => {
-                        for v in opt.values.iter() {
-                            buf.write_fmt(format_args!("\tlist {} '{}'\n", opt.name, v))?;
-                        }
-                    }
-                }
-            }
-        }
-
-        buf.write_all(b"\n")?;
-        Ok(())
+    pub(crate) fn set_name(&mut self, name: &str) {
+        self.name = name.into();
     }
 
     pub fn get_section_name(&self, section: &UciSection) -> String {
@@ -139,7 +102,7 @@ impl UciConfig {
         if name.starts_with('@') {
             self._get_unnamed(name)
         } else {
-            self._get_named(name)
+            Ok(self._get_named(name))
         }
     }
 
@@ -147,7 +110,7 @@ impl UciConfig {
         if name.starts_with('@') {
             self._get_unnamed_mut(name)
         } else {
-            self._get_named_mut(name)
+            Ok(self._get_named_mut(name))
         }
     }
 
@@ -162,7 +125,10 @@ impl UciConfig {
             .iter()
             .any(|sec| self.get_section_name(&section) == self.get_section_name(sec))
         {
-            let same_name_sec_mut = self.get_mut(self.get_section_name(&section).as_str()).unwrap().unwrap();
+            let same_name_sec_mut = self
+                .get_mut(self.get_section_name(&section).as_str())
+                .unwrap()
+                .unwrap();
             for opt in section.options.into_iter() {
                 same_name_sec_mut.merge(opt)
             }
@@ -181,6 +147,16 @@ impl UciConfig {
         {
             self.sections.remove(idx);
         };
+    }
+
+    pub fn del_all(&mut self, typ: &str) {
+        let secs = self
+            .sections
+            .clone()
+            .into_iter()
+            .filter(|sec| sec.sec_type != typ)
+            .collect();
+        self.sections = secs;
     }
 }
 
@@ -203,19 +179,13 @@ fn unmangle_section_name(section_name: &str) -> Result<(String, i32)> {
 
     for (i, r) in bytes_section_name.iter().enumerate() {
         if i != 0 && *r as char == '@' {
-            return Err(Error::new(
-                "invalid syntax: multiple @ signs found",
-            ));
+            return Err(Error::new("invalid syntax: multiple @ signs found"));
         };
         if bra > 0 && *r as char == '[' {
-            return Err(Error::new(
-                "invalid syntax: multiple open brackets found",
-            ));
+            return Err(Error::new("invalid syntax: multiple open brackets found"));
         };
         if i != ket && *r as char == ']' {
-            return Err(Error::new(
-                "invalid syntax: multiple closed brackets found",
-            ));
+            return Err(Error::new("invalid syntax: multiple closed brackets found"));
         };
         if *r as char == '[' {
             bra = i;

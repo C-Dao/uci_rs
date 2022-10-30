@@ -14,9 +14,9 @@ pub enum UciOptionType {
 }
 
 impl UciOption {
-    pub fn new(name: String, opt_type: UciOptionType, values: Vec<String>) -> UciOption {
+    pub fn new(name: &str, opt_type: UciOptionType, values: Vec<String>) -> UciOption {
         UciOption {
-            name,
+            name: name.into(),
             opt_type,
             values,
         }

@@ -1,4 +1,6 @@
 
+package 'uci_config'
+
 config core 'main'
 	option lang 'auto'
 	option mediaurlbase '/luci-static/bootstrap'

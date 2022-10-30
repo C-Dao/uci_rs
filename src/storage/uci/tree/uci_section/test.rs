@@ -9,13 +9,13 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     )],
                 },
                 UciOption::new(
-                    "pos".to_string(),
+                    "pos",
                     UciOptionType::TypeOption,
                     vec![format!("14")],
                 ),
@@ -23,7 +23,7 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeOption,
                         vec![format!("14")],
                     )],
@@ -34,13 +34,13 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeOption,
                         vec![format!("3")],
                     )],
                 },
                 UciOption::new(
-                    "pos".to_string(),
+                    "pos",
                     UciOptionType::TypeList,
                     vec![format!("14"), format!("3")],
                 ),
@@ -48,7 +48,7 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeList,
                         vec![format!("14"), format!("3")],
                     )],
@@ -59,13 +59,13 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5")],
                     )],
                 },
                 UciOption::new(
-                    "pos".to_string(),
+                    "pos",
                     UciOptionType::TypeOption,
                     vec![format!("14")],
                 ),
@@ -73,7 +73,7 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeOption,
                         vec![format!("14")],
                     )],
@@ -84,17 +84,17 @@
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5")],
                     )],
                 },
-                UciOption::new("pos".to_string(), UciOptionType::TypeList, vec![format!("14")]),
+                UciOption::new("pos", UciOptionType::TypeList, vec![format!("14")]),
                 UciSection {
                     name: "named".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeList,
                         vec![format!("3"), format!("5"), format!("14")],
                     )],
@@ -115,7 +115,7 @@
                     name: "@foo[-1]".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "pos".to_string(),
+                        "pos",
                         UciOptionType::TypeOption,
                         vec![format!("2")],
                     )],
@@ -128,7 +128,7 @@
                     name: "@foo[-1]".to_string(),
                     sec_type: "foo".to_string(),
                     options: vec![UciOption::new(
-                        "list".to_string(),
+                        "list",
                         UciOptionType::TypeList,
                         vec![format!("20")],
                     )],

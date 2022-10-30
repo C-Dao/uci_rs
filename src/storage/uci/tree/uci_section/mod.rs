@@ -8,10 +8,10 @@ pub struct UciSection {
 }
 
 impl UciSection {
-    pub fn new(sec_type: String, name: String) -> UciSection {
+    pub fn new(sec_type: &str, name: &str) -> UciSection {
         UciSection {
-            name,
-            sec_type,
+            name: name.into(),
+            sec_type: sec_type.into(),
             options: Vec::new(),
         }
     }

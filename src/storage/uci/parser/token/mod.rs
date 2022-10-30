@@ -1,4 +1,4 @@
-use std::fmt::{self};
+use std::fmt;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct TokenItem {
