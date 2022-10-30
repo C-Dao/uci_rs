@@ -80,7 +80,7 @@ fn test_uci_get_option_first() -> Result<()> {
 
 #[test]
 fn test_uci_is_bool_value() -> Result<()> {
-    let mut uci = Uci::new("test");
+    let uci = Uci::new("test");
     assert!(uci.is_bool_value("true"));
     assert!(uci.is_bool_value("1"));
     assert!(uci.is_bool_value("on"));

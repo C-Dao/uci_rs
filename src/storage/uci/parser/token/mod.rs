@@ -1,13 +1,13 @@
 use std::fmt;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TokenItem {
     pub typ: TokenItemType,
     pub val: String,
     pub pos: usize,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum TokenItemType {
    Error = 0,
    Eof,
@@ -70,11 +70,11 @@ impl fmt::Display for TokenItem {
                 self.pos
             );
         }
-        return write!(f, "({} {:?} {})", self.typ, self.val, self.pos);
+        write!(f, "({} {:?} {})", self.typ, self.val, self.pos)
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ScanTokenType {
     Error = 0,
     Package,

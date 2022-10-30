@@ -65,7 +65,7 @@ impl Uci {
                     Ok(())
                 }
                 None => {
-                    sec.add(UciOption::new(&option, opt_type, values));
+                    sec.add(UciOption::new(option, opt_type, values));
                     Ok(())
                 }
             },
@@ -94,7 +94,7 @@ pub trait UciCommand {
     fn set_option(&mut self, section: &str, option: &str, values: Vec<&str>) -> Result<()>;
     fn for_each<F>(&self, typ: &str, func: F)
     where
-        F: FnMut(&UciSection) -> ();
+        F: FnMut(&UciSection);
     fn write_in<W: Write>(&self, buf: &mut BufWriter<W>) -> Result<()>;
 }
 
@@ -136,7 +136,7 @@ impl UciCommand for Uci {
 
     fn get_option_last(&self, section: &str, option: &str) -> Result<(String, Option<String>)> {
         let (name, values) = self.get_option(section, option)?;
-        Ok((name, values.last().map(|v| v.clone())))
+        Ok((name, values.last().cloned()))
     }
 
     fn is_bool_value(&self, value: &str) -> bool {
@@ -242,7 +242,7 @@ impl UciCommand for Uci {
     fn get_option_first(&self, section: &str, option: &str) -> Result<(String, Option<String>)> {
         let opt = self._lookup_option(section, option)?;
 
-        Ok((opt.name.clone(), opt.values.first().map(|v| v.clone())))
+        Ok((opt.name.clone(), opt.values.first().cloned()))
     }
 
     fn get_section(&self, section: &str) -> Result<Option<(String, String)>> {
@@ -298,15 +298,15 @@ impl UciCommand for Uci {
             .last()
     }
 
-    fn for_each<F>(&self, typ: &str, mut func: F)
+    fn for_each<F>(&self, typ: &str, func: F)
     where
-        F: FnMut(&UciSection) -> (),
+        F: FnMut(&UciSection),
     {
         self.config
             .sections
             .iter()
             .filter(|sec| sec.sec_type == typ)
-            .for_each(|sec| func(sec))
+            .for_each(func)
     }
 }
 

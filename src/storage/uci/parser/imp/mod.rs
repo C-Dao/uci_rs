@@ -275,20 +275,20 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
                 let name = &tok.items[0].val;
                 let val = tok.items[1].val.clone();
 
-                if let Some(opt) = sec.as_mut().unwrap().get_mut(&name) {
+                if let Some(opt) = sec.as_mut().unwrap().get_mut(name) {
                     opt.set_values(vec![val]);
                 } else if let Some(s) = sec.as_mut() {
-                    s.add(UciOption::new(&name, UciOptionType::TypeOption, vec![val]))
+                    s.add(UciOption::new(name, UciOptionType::TypeOption, vec![val]))
                 };
             }
             ScanTokenType::List => {
                 let name = &tok.items[0].val;
                 let val = tok.items[1].val.clone();
 
-                if let Some(opt) = sec.as_mut().unwrap().get_mut(&name) {
+                if let Some(opt) = sec.as_mut().unwrap().get_mut(name) {
                     opt.merge_values(vec![val]);
                 } else if let Some(s) = sec.as_mut() {
-                    s.add(UciOption::new(&name, UciOptionType::TypeList, vec![val]))
+                    s.add(UciOption::new(name, UciOptionType::TypeList, vec![val]))
                 };
             }
         };
