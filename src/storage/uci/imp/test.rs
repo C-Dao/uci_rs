@@ -193,16 +193,15 @@ fn test_uci_write_in() -> Result<()> {
 
     open_options.read(true).write(true).create_new(true);
     open_options.mode(0o644);
-    let file = open_options.open(".uci_config.tmp")?;
+    let file = open_options.open(".write_in_uci_config.tmp")?;
     let mut buf = BufWriter::new(file);
     uci.write_in(&mut buf)?;
     buf.flush()?;
-
-    let mut file = File::open(".uci_config.tmp")?;
+    let mut file = File::open(".write_in_uci_config.tmp")?;
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     assert_eq!(contents, uci_str);
-    fs::remove_file(".uci_config.tmp")?;
+    fs::remove_file(".write_in_uci_config.tmp")?;
     Ok(())
 }
