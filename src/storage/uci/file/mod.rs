@@ -18,7 +18,6 @@ pub fn load_config(name: &str, dir: &str) -> Result<Uci> {
     } else {
         Path::new(dir).join(name)
     };
-    println!("{:?}", load_path);
     let mut file = File::open(load_path)?;
     let mut string_buffer = String::new();
 
@@ -40,7 +39,6 @@ pub fn save_config(dir: &str, uci: Uci) -> Result<()> {
     if !path.is_absolute() {
         path = env::current_dir()?.join(path)
     }
-    println!("{:?}", path);
 
     let mut open_options = OpenOptions::new();
     open_options.read(true).write(true).create_new(true);

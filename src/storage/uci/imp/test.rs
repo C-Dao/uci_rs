@@ -80,15 +80,14 @@ fn test_uci_get_option_first() -> Result<()> {
 
 #[test]
 fn test_uci_is_bool_value() -> Result<()> {
-    let uci = Uci::new("test");
-    assert!(uci.is_bool_value("true"));
-    assert!(uci.is_bool_value("1"));
-    assert!(uci.is_bool_value("on"));
-    assert!(uci.is_bool_value("yes"));
-    assert!(uci.is_bool_value("enabled"));
-    assert!(!uci.is_bool_value("0"));
-    assert!(!uci.is_bool_value("false"));
-    assert!(!uci.is_bool_value("disabled"));
+    assert!(is_bool_value("true"));
+    assert!(is_bool_value("1"));
+    assert!(is_bool_value("on"));
+    assert!(is_bool_value("yes"));
+    assert!(is_bool_value("enabled"));
+    assert!(!is_bool_value("0"));
+    assert!(!is_bool_value("false"));
+    assert!(!is_bool_value("disabled"));
     Ok(())
 }
 
@@ -186,7 +185,7 @@ fn test_uci_for_each() -> Result<()> {
 
 #[test]
 fn test_uci_write_in() -> Result<()> {
-    let uci_str = include_str!("../test_data/uci_config");
+    let uci_str = include_str!("../.test_data/uci_config");
     let uci = uci_parse_to_uci("uci_config", uci_str.to_string())?;
 
     let mut open_options = OpenOptions::new();

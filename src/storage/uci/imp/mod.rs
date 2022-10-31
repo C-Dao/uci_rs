@@ -83,7 +83,6 @@ pub trait UciCommand {
     fn get_all_options(&self, section: &str) -> Result<Vec<(String, &Vec<String>)>>;
     fn get_option_last(&self, section: &str, option: &str) -> Result<(String, Option<String>)>;
     fn get_option_first(&self, section: &str, option: &str) -> Result<(String, Option<String>)>;
-    fn is_bool_value(&self, value: &str) -> bool;
     fn get_section(&self, section: &str) -> Result<Option<(String, String)>>;
     fn get_all(&self, typ: &str) -> Vec<(String, String)>;
     fn get_all_sections(&self) -> Vec<(String, String)>;
@@ -137,21 +136,6 @@ impl UciCommand for Uci {
     fn get_option_last(&self, section: &str, option: &str) -> Result<(String, Option<String>)> {
         let (name, values) = self.get_option(section, option)?;
         Ok((name, values.last().cloned()))
-    }
-
-    fn is_bool_value(&self, value: &str) -> bool {
-        match value {
-            "1" => true,
-            "on" => true,
-            "true" => true,
-            "yes" => true,
-            "enabled" => true,
-            "0" => false,
-            "false" => false,
-            "no" => false,
-            "disabled" => false,
-            _ => false,
-        }
     }
 
     fn set_option(&mut self, section: &str, option: &str, values: Vec<&str>) -> Result<()> {
@@ -310,5 +294,20 @@ impl UciCommand for Uci {
     }
 }
 
+
+pub fn is_bool_value(value: &str) -> bool {
+    match value {
+        "1" => true,
+        "on" => true,
+        "true" => true,
+        "yes" => true,
+        "enabled" => true,
+        "0" => false,
+        "false" => false,
+        "no" => false,
+        "disabled" => false,
+        _ => false,
+    }
+}
 #[cfg(test)]
 mod test;
