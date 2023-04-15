@@ -2,7 +2,10 @@
 name = "uci_rs"
 version = "0.1.0"
 edition = "2021"
-
+description = "an openwrt's UCI (Unified Configuration Interface) parser and serializer."
+license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+
