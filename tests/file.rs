@@ -1,19 +1,18 @@
-use std::fs;
+use std::{fs::{self, File}, io::Read};
 
-use super::*;
-use crate::utils::Result;
+use uci_rs::{load_config, parse_raw_to_uci, save_config, Result, UciCommand};
 
 #[test]
 fn test_uci_file_load_config() -> Result<()> {
-    let uci = load_config("uci_config", "src/storage/uci/.test_data")?;
+    let uci = load_config("uci_config", "src/tests/.test_data")?;
     assert_eq!(uci.get_package(), "uci_config");
     Ok(())
 }
 
 #[test]
 fn test_uci_file_save_config() -> Result<()> {
-    let uci_str = include_str!("../.test_data/uci_config");
-    let uci = uci_parse_to_uci("uci_config", uci_str.to_string())?;
+    let uci_str = include_str!(".test_data/uci_config");
+    let uci = parse_raw_to_uci("uci_config", uci_str.to_string())?;
     save_config(".uci_config.tmp", uci)?;
 
     let mut file = File::open(".uci_config.tmp/uci_config")?;

@@ -1,6 +1,7 @@
+use crate::parser::uci_parse;
+
 use super::super::*;
 use super::*;
-use crate::storage::uci::{parser::uci_parse, tree::uci_option::UciOption};
 
 #[test]
 fn test_unmangle_section_name() {

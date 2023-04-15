@@ -4,8 +4,6 @@ use crate::utils::{Error, Result};
 
 use super::tree::*;
 
-#[allow(dead_code)]
-
 pub struct Uci {
     config: UciConfig,
 }
@@ -309,5 +307,3 @@ pub fn is_bool_value(value: &str) -> bool {
         _ => false,
     }
 }
-#[cfg(test)]
-mod test;

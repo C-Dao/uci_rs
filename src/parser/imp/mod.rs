@@ -313,7 +313,7 @@ pub fn uci_parse(name: &str, input: String) -> Result<UciConfig> {
     }
 }
 
-pub fn uci_parse_to_uci(name: &str, input: String) -> Result<Uci> {
+pub fn parse_raw_to_uci(name: &str, input: String) -> Result<Uci> {
     let cfg = uci_parse(name, input)?;
     let mut uci = Uci::new(name);
     uci.insert_config(cfg);

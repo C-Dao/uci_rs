@@ -4,7 +4,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::{env, io};
 use std::{io::Read, path::Path};
 
-use super::parser::uci_parse_to_uci;
+use super::parser::parse_raw_to_uci;
 use super::{imp::UciCommand, Uci};
 
 use crate::utils::{Error, Result};
@@ -23,7 +23,7 @@ pub fn load_config(name: &str, dir: &str) -> Result<Uci> {
 
     file.read_to_string(&mut string_buffer)?;
 
-    let uci = uci_parse_to_uci(name, string_buffer)?;
+    let uci = parse_raw_to_uci(name, string_buffer)?;
 
     Ok(uci)
 }
@@ -65,5 +65,3 @@ pub fn save_config(dir: &str, uci: Uci) -> Result<()> {
 
     Err(Error::new("too many files exist"))
 }
-#[cfg(test)]
-mod test;

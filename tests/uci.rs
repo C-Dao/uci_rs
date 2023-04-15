@@ -1,12 +1,10 @@
 use std::{
-    fs::{File, OpenOptions, self},
-    io::Read,
+    fs::{self, File, OpenOptions},
+    io::{Read, BufWriter, Write},
     os::unix::prelude::OpenOptionsExt,
 };
 
-use crate::storage::uci::parser::uci_parse_to_uci;
-
-use super::*;
+use uci_rs::*;
 
 #[test]
 fn test_uci_add_section() -> Result<()> {
@@ -185,8 +183,8 @@ fn test_uci_for_each() -> Result<()> {
 
 #[test]
 fn test_uci_write_in() -> Result<()> {
-    let uci_str = include_str!("../.test_data/uci_config");
-    let uci = uci_parse_to_uci("uci_config", uci_str.to_string())?;
+    let uci_str = include_str!(".test_data/uci_config");
+    let uci = parse_raw_to_uci("uci_config", uci_str.to_string())?;
 
     let mut open_options = OpenOptions::new();
 
