@@ -6,6 +6,7 @@ use uci_rs::{load_config, parse_raw_to_uci, save_config, Result, UciCommand};
 fn test_uci_file_load_config() -> Result<()> {
     let uci = load_config("uci_config", "tests/.test_data")?;
     assert_eq!(uci.get_package(), "uci_config");
+    println!("{:?}", uci.get_option("wan","ifname"));
     Ok(())
 }
 

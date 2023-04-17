@@ -81,7 +81,7 @@ pub trait UciCommand {
     fn get_all_options(&self, section: &str) -> Result<Vec<(String, &Vec<String>)>>;
     fn get_option_last(&self, section: &str, option: &str) -> Result<(String, Option<String>)>;
     fn get_option_first(&self, section: &str, option: &str) -> Result<(String, Option<String>)>;
-    fn get_section(&self, section: &str) -> Result<Option<(String, String)>>;
+    fn get_section(&self, section: &str) -> Result<(String, String)>;
     fn get_all(&self, typ: &str) -> Vec<(String, String)>;
     fn get_all_sections(&self) -> Vec<(String, String)>;
     fn get_section_first(&self, typ: &str) -> Option<(String, String)>;
@@ -227,15 +227,15 @@ impl UciCommand for Uci {
         Ok((opt.name.clone(), opt.values.first().cloned()))
     }
 
-    fn get_section(&self, section: &str) -> Result<Option<(String, String)>> {
+    fn get_section(&self, section: &str) -> Result<(String, String)> {
         let sec_opt = self.config.get(section)?;
         if let Some(sec) = sec_opt {
-            Ok(Some((
+            Ok((
                 sec.sec_type.clone(),
                 self.config.get_section_name(sec),
-            )))
+            ))
         } else {
-            Ok(None)
+            Err(Error::new("not found target section"))
         }
     }
 
