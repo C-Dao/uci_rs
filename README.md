@@ -1,6 +1,6 @@
 # uci_rs
 
-[![Test Status](https://github.com/C-Dao/uci_rs/workflows/tests/badge.svg?event=push)](https://github.com/C-Dao/uci_rs/actions)
+[![Test Status](https://github.com/c-dao/uci_rs/workflows/Tests/badge.svg?event=push)](https://github.com/C-Dao/uci_rs/actions)
 [![Crate](https://img.shields.io/crates/v/uci_rs.svg)](https://crates.io/crates/uci_rs)
 [![Documents](https://docs.rs/uci_rs/badge.svg)](https://docs.rs/uci_rs)
 
