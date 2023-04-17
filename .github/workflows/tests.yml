@@ -3,9 +3,9 @@ name: Tests
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 permissions:
   contents: read #  to fetch code (actions/checkout)
@@ -24,11 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
           toolchain: ${{ matrix.toolchain }}
       - name: Test uci_rs
         run: |
-          cargo test --target ${{ matrix.target }} --lib --tests --no-default-features
+          cargo test --target ${{ matrix.target }} --lib --tests --all-features
           cargo test --target ${{ matrix.target }} --examples
