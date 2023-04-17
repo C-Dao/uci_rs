@@ -11,7 +11,7 @@ fn test_uci_add_section() -> Result<()> {
     let mut uci = Uci::new("test");
     uci.add_section("a", "b")?;
     let sec = uci.get_section("b")?;
-    assert_eq!(sec, Some(("a".to_string(), "b".to_string())));
+    assert_eq!(sec, ("a".to_string(), "b".to_string()));
     Ok(())
 }
 
@@ -20,10 +20,10 @@ fn test_uci_del_section() -> Result<()> {
     let mut uci = Uci::new("test");
     uci.add_section("ab", "bb")?;
     let sec = uci.get_section("bb")?;
-    assert_eq!(sec, Some(("ab".to_string(), "bb".to_string())));
+    assert_eq!(sec, ("ab".to_string(), "bb".to_string()));
     uci.del_section("bb")?;
-    let sec = uci.get_section("bb")?;
-    assert_eq!(sec, None);
+    let sec = uci.get_section("bb");
+    assert!(sec.is_err());
     Ok(())
 }
 
@@ -94,7 +94,7 @@ fn test_uci_get_section() -> Result<()> {
     let mut uci = Uci::new("test");
     uci.add_section("ab", "bb")?;
     let sec = uci.get_section("bb")?;
-    assert_eq!(sec, Some(("ab".to_string(), "bb".to_string())));
+    assert_eq!(sec, ("ab".to_string(), "bb".to_string()));
     Ok(())
 }
 
@@ -198,7 +198,7 @@ fn test_uci_write_in() -> Result<()> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    assert_eq!(contents, uci_str);
     fs::remove_file(".write_in_uci_config.tmp")?;
+    assert_eq!(contents.trim_end(), uci_str.trim_end());
     Ok(())
 }

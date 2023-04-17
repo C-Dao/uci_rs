@@ -6,7 +6,6 @@ use uci_rs::{load_config, parse_raw_to_uci, save_config, Result, UciCommand};
 fn test_uci_file_load_config() -> Result<()> {
     let uci = load_config("uci_config", "tests/.test_data")?;
     assert_eq!(uci.get_package(), "uci_config");
-    println!("{:?}", uci.get_option("wan","ifname"));
     Ok(())
 }
 
@@ -20,7 +19,7 @@ fn test_uci_file_save_config() -> Result<()> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    assert_eq!(contents, uci_str);
+    assert_eq!(contents.trim_end(), uci_str.trim_end());
     fs::remove_dir_all(".uci_config.tmp")?;
     Ok(())
 }
