@@ -1,8 +1,7 @@
-use std::{
-    fs::{self, File, OpenOptions},
-    io::{Read, BufWriter, Write},
-    os::unix::prelude::OpenOptionsExt,
-};
+use std::fs::{create_dir, File, OpenOptions};
+use std::io::{BufWriter, Read, Write};
+use std::os::unix::prelude::OpenOptionsExt;
+use std::env;
 
 use uci_rs::*;
 
@@ -190,15 +189,21 @@ fn test_uci_write_in() -> Result<()> {
 
     open_options.read(true).write(true).create_new(true);
     open_options.mode(0o644);
-    let file = open_options.open(".write_in_uci_config.tmp")?;
-    let mut buf = BufWriter::new(file);
-    uci.write_in(&mut buf)?;
-    buf.flush()?;
-    let mut file = File::open(".write_in_uci_config.tmp")?;
 
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    fs::remove_file(".write_in_uci_config.tmp")?;
-    assert_eq!(contents.trim_end(), uci_str.trim_end());
-    Ok(())
+    let dir = env::current_dir()?.join(".tmp");
+
+    match create_dir(&dir) {
+        _ => {
+            let file = open_options.open(dir.join("write_in_uci_config"))?;
+            let mut buf = BufWriter::new(file);
+            uci.write_in(&mut buf)?;
+            buf.flush()?;
+            let mut file = File::open(dir.join("write_in_uci_config"))?;
+
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)?;
+            assert_eq!(contents.trim_end(), uci_str.trim_end());
+            Ok(())
+        }
+    }
 }

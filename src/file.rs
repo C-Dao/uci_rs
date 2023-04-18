@@ -1,67 +1,259 @@
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufWriter, Write};
+use std::env;
+use std::ffi::OsString;
+use std::fmt;
+use std::fs::{self, create_dir_all, File, OpenOptions};
+use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::iter::repeat_with;
+use std::mem;
+use std::path::{Path, PathBuf};
+
 use std::os::unix::fs::OpenOptionsExt;
-use std::{env, io};
-use std::{io::Read, path::Path};
 
-use super::parser::parse_raw_to_uci;
-use super::{imp::UciCommand, Uci};
+use crate::utils::{PathError, PersistError};
 
-use crate::utils::{Error, Result};
+use super::Result;
 
-const DEFAULT_LOAD_DIR: &str = "/etc/config";
 const NUM_RETRIES: u32 = 5;
+const NUM_RAND_CHARS: usize = 6;
 
-pub fn load_config(name: &str, dir: &str) -> Result<Uci> {
-    let load_path = if dir.is_empty() {
-        Path::new(DEFAULT_LOAD_DIR).join(name)
-    } else {
-        Path::new(dir).join(name)
-    };
-    let mut file = File::open(load_path)?;
-    let mut string_buffer = String::new();
-
-    file.read_to_string(&mut string_buffer)?;
-
-    let uci = parse_raw_to_uci(name, string_buffer)?;
-
-    Ok(uci)
-}
-
-pub fn save_config(dir: &str, uci: Uci) -> Result<()> {
-    let save_dir = if dir.is_empty() {
-        Path::new(DEFAULT_LOAD_DIR)
-    } else {
-        Path::new(dir)
-    };
-    let mut path = save_dir.join(&uci.get_package());
-
+fn create_named(mut path: PathBuf, open_options: &mut OpenOptions) -> io::Result<TempFile> {
     if !path.is_absolute() {
         path = env::current_dir()?.join(path)
     }
 
-    let mut open_options = OpenOptions::new();
     open_options.read(true).write(true).create_new(true);
     open_options.mode(0o644);
+    open_options.open(&path).map(|file| TempFile {
+        path: path.into_boxed_path(),
+        file,
+    })
+}
 
-    for _ in 0..NUM_RETRIES {
-        return match open_options.open(&path) {
-            Ok(file) => {
-                let mut buf = BufWriter::new(file);
-                uci.write_in(&mut buf).map(|_| {
-                    buf.flush()?;
-                    Ok(())
-                })?
-            }
-            Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                fs::create_dir(save_dir)?;
-                continue;
-            }
-            Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(ref e) if e.kind() == io::ErrorKind::AddrInUse => continue,
-            Err(_) => break,
+fn persist(old_path: &Path, new_path: &Path, overwrite: bool) -> io::Result<()> {
+    if overwrite {
+        println!("{:?} {:?}", old_path, new_path);
+        fs::rename(old_path, new_path)?;
+    } else {
+        fs::hard_link(old_path, new_path)?;
+        fs::remove_file(old_path)?;
+    }
+    Ok(())
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct TempFile<F = File> {
+    pub path: Box<Path>,
+    pub file: F,
+}
+
+impl TempFile<File> {
+    const RANDOM_LEN: usize = NUM_RAND_CHARS;
+    const SUFFIX: &'static str = ".tmp";
+    const APPEND: bool = false;
+    pub fn new<P: AsRef<Path>>(dir: P, prefix: String) -> io::Result<TempFile> {
+        let num_retries = if Self::RANDOM_LEN != 0 {
+            NUM_RETRIES
+        } else {
+            1
         };
+
+        for _ in 0..num_retries {
+            let path = dir.as_ref().join(Self::tmp_name(&prefix));
+            return match create_named(path, OpenOptions::new().append(Self::APPEND)) {
+                Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+                Err(ref e) if e.kind() == io::ErrorKind::AddrInUse => continue,
+                Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                    create_dir_all(&dir)?;
+                    continue;
+                }
+                res => res,
+            };
+        }
+
+        Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "too many temporary files exist",
+        ))
     }
 
-    Err(Error::new("too many files exist"))
+    fn tmp_name(prefix: &str) -> OsString {
+        let mut buf = OsString::with_capacity(prefix.len() + Self::SUFFIX.len() + Self::RANDOM_LEN);
+        buf.push(prefix);
+        buf.push("_");
+        let mut char_buf = [0u8; 4];
+        for c in repeat_with(fastrand::alphanumeric).take(Self::RANDOM_LEN) {
+            buf.push(c.encode_utf8(&mut char_buf));
+        }
+        buf.push(Self::SUFFIX);
+        buf
+    }
+}
+
+impl<F> TempFile<F> {
+    pub fn close(mut self) -> Result<()> {
+        let result = fs::remove_file(&self.path).map_err(|err| PathError {
+            path: self.path.clone().into(),
+            error: err,
+        })?;
+        self.path = PathBuf::new().into_boxed_path();
+        mem::forget(self);
+        Ok(result)
+    }
+
+    pub fn persist<P: AsRef<Path>>(mut self, new_path: P) -> Result<()> {
+        let TempFile { ref path, ref file } = self;
+        match persist(&self.path, new_path.as_ref(), true) {
+            Ok(_) => {
+                self.path = PathBuf::new().into_boxed_path();
+                mem::forget(self);
+                Ok(())
+            }
+            Err(error) => Err(PersistError {
+                file: TempFile {
+                    path: path.clone(),
+                    file,
+                },
+                error,
+            }
+            .into()),
+        }
+    }
+
+    pub fn as_file(&self) -> &F {
+        &self.file
+    }
+
+    pub fn as_file_mut(&mut self) -> &mut F {
+        &mut self.file
+    }
+}
+
+impl<F: Read> Read for TempFile<F> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.as_file_mut().read(buf).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<'a, F> Read for &'a TempFile<F>
+where
+    &'a F: Read,
+{
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.as_file().read(buf).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<F: Write> Write for TempFile<F> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.as_file_mut().write(buf).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        self.as_file_mut().flush().map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<'a, F> Write for &'a TempFile<F>
+where
+    &'a F: Write,
+{
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.as_file().write(buf).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        self.as_file().flush().map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<F: Seek> Seek for TempFile<F> {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.as_file_mut().seek(pos).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<'a, F> Seek for &'a TempFile<F>
+where
+    &'a F: Seek,
+{
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.as_file().seek(pos).map_err(|error| {
+            PathError {
+                path: self.path.clone().into_path_buf(),
+                error,
+            }
+            .into()
+        })
+    }
+}
+
+impl<F> std::os::unix::io::AsRawFd for TempFile<F>
+where
+    F: std::os::unix::io::AsRawFd,
+{
+    #[inline]
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.as_file().as_raw_fd()
+    }
+}
+
+impl<F> Drop for TempFile<F> {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+impl<F> fmt::Debug for TempFile<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TempFile({:?})", self.path)
+    }
+}
+
+impl<F> AsRef<Path> for TempFile<F> {
+    #[inline]
+    fn as_ref(&self) -> &Path {
+        &self.path
+    }
 }
