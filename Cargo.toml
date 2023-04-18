@@ -1,6 +1,6 @@
 [package]
 name = "uci_rs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "an openwrt's UCI (Unified Configuration Interface) parser and serializer."
 license = "MIT"
